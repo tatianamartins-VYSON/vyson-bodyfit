@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vyson BodyFit · Manequim 3D</title>
+<style>
+:root{--pet:#0b4a5a;--lar:#ff8000;--bg:#f4f6f8;--ink:#0f1d24;--mut:#4f6068;--line:#dfe5ea}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);display:grid;grid-template-columns:300px 1fr 300px;height:100vh}
+aside{background:#fff;border-right:1px solid var(--line);padding:14px;overflow:auto}aside.dir{border-right:0;border-left:1px solid var(--line)}
+h1{font-size:18px;margin:0 0 2px;color:var(--pet)}h2{font-size:13px;margin:16px 0 8px;color:#9a4a00;text-transform:uppercase;letter-spacing:.06em}
+.sub{color:var(--mut);font-size:12px;margin:0 0 8px}
+label{display:flex;justify-content:space-between;align-items:center;margin:6px 0;font-size:13px}label input[type=range]{width:120px}
+output{min-width:46px;text-align:right;font-weight:700;color:var(--pet)}
+.tons{display:flex;gap:6px;flex-wrap:wrap}.tons button{width:28px;height:28px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #c9d3d9;cursor:pointer}.tons button.on{box-shadow:0 0 0 3px var(--lar)}
+#cena{position:relative}#cena canvas{display:block}
+.camadas{position:absolute;top:12px;left:12px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px}
+.camadas label{margin:2px 0;justify-content:flex-start;gap:6px}
+.selo{position:absolute;bottom:12px;left:12px;background:var(--pet);color:#fff;border-radius:8px;padding:6px 10px;font-size:12px}
+.item{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px;margin:6px 0;cursor:pointer;background:#fff}
+.item:hover{border-color:var(--pet)}.item.on{border-color:var(--lar);background:#fff7ef}
+.item i{width:34px;height:34px;border-radius:8px;flex-shrink:0}.item b{display:block;font-size:13px}.item small{color:var(--mut)}
+.fit{font-size:12px;font-weight:700;margin-left:auto;white-space:nowrap}.ok{color:#0d7a52}.at{color:#a15c00}.no{color:#b3261e}
+.dica{background:#f4f6f8;border-radius:8px;padding:8px;font-size:12px;color:var(--mut);margin-top:8px}
+@media(max-width:900px){body{grid-template-columns:1fr;height:auto}#cena{height:70vh}}
+</style>
+</head>
+<body>
+<aside>
+<h1>Vyson BodyFit</h1><p class="sub">Manequim 3D paramétrico · as medidas geram o avatar</p>
+<h2>Medidas (cm)</h2>
+<div id="medidas"></div>
+<h2>Tom de pele</h2><div class="tons" id="tons"></div>
+<div class="dica">Sem foto: as medidas e as escolhas geram o avatar. A foto vestida é opcional e só serve para a fita digital.</div>
+</aside>
+<main id="cena">
+<div class="camadas"><b>Camadas</b>
+<label><input type="checkbox" id="vCotas" checked> Cotas (medidas)</label>
+<label><input type="checkbox" id="vRoupas" checked> Roupas</label>
+<label><input type="checkbox" id="vAcess" checked> Acessórios</label>
+<label><input type="checkbox" id="vGrade" checked> Grade da planta</label></div>
+<div class="selo">Arraste para girar · role para aproximar</div>
+<div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px"><button id="bF" class="sx on">♀ Feminino</button><button id="bM" class="sx">♂ Masculino</button><button id="bGiro" class="sx">⟳ Girar 360°</button></div>
+<style>.sx{border:1px solid #0b4a5a;background:#fff;color:#0b4a5a;border-radius:16px;padding:6px 12px;font-weight:600;cursor:pointer}.sx.on{background:#0b4a5a;color:#fff}</style>
+</main>
+<aside class="dir">
+<h2>Vitrine digital</h2><p class="sub">Clique para vestir. Vários itens ao mesmo tempo.</p>
+<div id="vitrine"></div>
+<div class="dica" id="resumo"></div>
+</aside>
+<script type="module">
+import * as THREE from './three.module.js';
+import {OrbitControls} from './OrbitControls.js';
+let SEXO="F";const M={altura:165,ombros:40,busto:92,cintura:74,quadril:100,braco:58,perna:78};
+const LIM={altura:[140,200],ombros:[32,52],busto:[70,140],cintura:[55,130],quadril:[75,150],braco:[45,70],perna:[60,95]};
+const NOMES={altura:"Altura",ombros:"Ombros",busto:"Busto",cintura:"Cintura",quadril:"Quadril",braco:"Braço",perna:"Perna (entrepernas)"};
+const TONS=["#f6d7c3","#eac0a1","#d8a47f","#b97f57","#8d5a3b","#5e3a26"];let pele=TONS[2];
+const PECAS=[
+ {id:"regata",nome:"Regata canelada",tipo:"top",so:"F",cor:"#ff8000",tab:{P:[84,68],M:[90,74],G:[98,82]},tec:"malha canelada (marca menos)"},
+ {id:"blusa",nome:"Blusa de seda",tipo:"top",so:"F",cor:"#2e7d9a",tab:{P:[86,70],M:[92,76],G:[100,84]},tec:"seda (caimento fluido)"},
+ {id:"short",nome:"Short alfaiataria",tipo:"bottom",so:"F",cor:"#33424a",tab:{P:[94,68],M:[100,74],G:[108,82]},tec:"alfaiataria (estrutura)"},
+ {id:"saia",nome:"Saia midi",tipo:"saia",so:"F",cor:"#9a3d5c",tab:{P:[96,68],M:[102,74],G:[110,82]},tec:"viscose (cai bem)"},
+ {id:"camisa",nome:"Camiseta algodão",tipo:"top",so:"M",cor:"#2e5d8a",tab:{P:[92,80],M:[100,88],G:[108,96]},tec:"algodão (estrutura leve)"},
+ {id:"bermuda",nome:"Bermuda sarja",tipo:"bottom",so:"M",cor:"#5a5040",tab:{P:[92,78],M:[98,86],G:[106,94]},tec:"sarja (firme)"},
+ {id:"sandalia",nome:"Sandália",tipo:"pe",cor:"#7a4a2a"},
+ {id:"bolsa",nome:"Bolsa transversal",tipo:"bolsa",cor:"#c58b2a"},
+ {id:"salto",nome:"Sapato de salto",tipo:"salto",so:"F",cor:"#1c1c1c"},
+ {id:"pulseira",nome:"Pulseira dourada",tipo:"mao",cor:"#d4af37"},
+ {id:"anel",nome:"Anel",tipo:"mao",cor:"#d4af37"},
+ {id:"batom",nome:"Batom vermelho",tipo:"make",cor:"#c0183a",tec:"maquiagem"},
+ {id:"sombra",nome:"Sombra lilás",tipo:"make",so:"F",cor:"#8e5aa8",tec:"maquiagem"},
+ {id:"blush",nome:"Blush rosado",tipo:"make",cor:"#e0607a",tec:"maquiagem"},
+ {id:"brinco",nome:"Brincos",tipo:"brinco",so:"F",cor:"#d4af37"}];
+const usando=new Set(["regata","short"]);
+// medidas
+const md=document.getElementById("medidas");
+for(const k in M){const l=document.createElement("label");l.innerHTML=`${NOMES[k]} <input type="range" min="${LIM[k][0]}" max="${LIM[k][1]}" value="${M[k]}" data-k="${k}"><output>${M[k]}</output>`;md.appendChild(l);
+ l.querySelector("input").oninput=e=>{M[k]=+e.target.value;l.querySelector("output").textContent=M[k];montar()}}
+const tn=document.getElementById("tons");TONS.forEach(t=>{const b=document.createElement("button");b.style.background=t;b.title="Tom "+t;if(t===pele)b.className="on";b.onclick=()=>{pele=t;[...tn.children].forEach(x=>x.className="");b.className="on";montar()};tn.appendChild(b)});
+// cena
+const cena=document.getElementById("cena");
+const ren=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});ren.setPixelRatio(Math.min(devicePixelRatio,2));cena.appendChild(ren.domElement);
+const sc=new THREE.Scene();sc.background=new THREE.Color("#eef3f6");
+const cam=new THREE.PerspectiveCamera(35,1,1,2000);cam.position.set(150,120,260);
+const ctl=new OrbitControls(cam,ren.domElement);ctl.target.set(0,85,0);ctl.enableDamping=true;
+sc.add(new THREE.HemisphereLight("#ffffff","#b8c4cc",1.1));const dl=new THREE.DirectionalLight("#fff",1.2);dl.position.set(80,200,120);sc.add(dl);
+const grade=new THREE.GridHelper(300,30,"#0b4a5a","#c9d6dd");sc.add(grade);
+let G=new THREE.Group();sc.add(G);
+const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.65});
+const r=c=>c/(2*Math.PI); // raio a partir da circunferência
+function cap(rad,len,c){const m=new THREE.Mesh(new THREE.CapsuleGeometry(rad,len,8,24),mat(c));return m}
+function tronco(rB,rC,rQ,h,c,esc=1){ // perfil torcido pelo busto/cintura/quadril
+ const pts=[[rQ*0.85,0],[rQ,h*0.12],[rQ*.98,h*.22],[rC,h*.45],[rB,h*.72],[rB*.95,h*.86],[rB*.6,h]].map(p=>new THREE.Vector2(p[0]*esc,p[1]));
+ const g=new THREE.LatheGeometry(pts,40);g.scale(1,1,0.72);return new THREE.Mesh(g,mat(c))}
+function cota(a,b,txt,off){const g=new THREE.Group();const lm=new THREE.LineBasicMaterial({color:"#ff8000"});
+ g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([a,b]),lm));
+ const cv=document.createElement("canvas");cv.width=256;cv.height=64;const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,256,64);x.strokeStyle="#ff8000";x.lineWidth=4;x.strokeRect(2,2,252,60);x.fillStyle="#0b4a5a";x.font="bold 30px system-ui";x.textAlign="center";x.fillText(txt,128,43);
+ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false}));sp.scale.set(26,6.5,1);sp.position.copy(a.clone().add(b).multiplyScalar(.5)).add(off||new THREE.Vector3());g.add(sp);return g}
+function fit(p){if(!p.tab)return null;let melhor=null;
+ for(const[t,[a,c]] of Object.entries(p.tab)){const ref=p.tipo==="top"?[M.busto,M.cintura]:[M.quadril,M.cintura];const d=Math.max(ref[0]-a,ref[1]-c);
+  if(d<=0&&(!melhor||a<melhor.a))melhor={t,a,d}}
+ if(!melhor){return{cls:"no",txt:"❌ não serve",det:"Nenhum tamanho da tabela cobre suas medidas. Veja sob medida."}}
+ const folga=Math.min(...Object.values(p.tab).map(([a])=>a-(p.tipo==="top"?M.busto:M.quadril)).filter(x=>x>=0));
+ return folga<=2?{cls:"at",txt:`⚠️ ${melhor.t} justo`,det:`Tamanho ${melhor.t}: fica justo (folga de ${folga} cm).`}:{cls:"ok",txt:`✅ ${melhor.t} ideal`,det:`Tamanho ${melhor.t}: caimento ideal (folga de ${folga} cm).`}}
+function montar(){
+ for(const p of PECAS)if(p.so&&p.so!==SEXO)usando.delete(p.id);if(SEXO==="M"&&![...usando].some(i=>PECAS.find(p=>p.id===i).tipo==="top"))usando.add("camisa");if(SEXO==="M"&&![...usando].some(i=>["bottom","saia"].includes(PECAS.find(p=>p.id===i).tipo)))usando.add("bermuda");if(SEXO==="F"&&usando.size===0){usando.add("regata");usando.add("short")}sc.remove(G);G=new THREE.Group();sc.add(G);
+ const H=M.altura,cabeca=H*.13,pescoco=H*.04,troncoH=H*.30,pernaH=M.perna*1.0,quadrilY=pernaH+4;
+ const rB=r(M.busto),rC=r(M.cintura),rQ=r(M.quadril),ombro=M.ombros/2;
+ const corpo=new THREE.Group();G.add(corpo);const acessM=[];
+ const t=SEXO==="M"?tronco(rB*.98,rC*1.0,rQ*.92,troncoH,pele):tronco(rB,rC,rQ,troncoH,pele);t.position.y=quadrilY;corpo.add(t);
+ const pes=cap(4.5,pescoco,pele);pes.position.y=quadrilY+troncoH+pescoco/2;corpo.add(pes);
+ const cab=new THREE.Mesh(new THREE.SphereGeometry(cabeca*.42,32,24),mat(pele));cab.scale.set(.85,1.1,.95);cab.position.y=H-cabeca*.5;corpo.add(cab);
+ const R=cabeca*.42,fy=H-cabeca*.5,fz=R*.95*.93,tem=id=>usando.has(id);
+ const rosto=new THREE.Group();corpo.add(rosto);
+ for(const s of[-1,1]){const olho=new THREE.Mesh(new THREE.SphereGeometry(R*.16,16,12),mat("#fff"));olho.scale.z=.5;olho.position.set(s*R*.33,fy+R*.15,fz*.93);rosto.add(olho);
+  const iris=new THREE.Mesh(new THREE.SphereGeometry(R*.09,12,10),mat("#3b2416"));iris.position.set(s*R*.33,fy+R*.15,fz*.93+R*.07);rosto.add(iris);
+  const sob=new THREE.Mesh(new THREE.TorusGeometry(R*.17,R*.025,6,16,Math.PI*.8),mat("#3b2416"));sob.position.set(s*R*.33,fy+R*.22,fz*.9);sob.rotation.z=Math.PI*.1;rosto.add(sob);
+  if(tem("sombra")){const sm=new THREE.Mesh(new THREE.SphereGeometry(R*.19,16,10,0,Math.PI*2,0,Math.PI*.5),mat("#8e5aa8"));sm.scale.z=.45;sm.position.set(s*R*.33,fy+R*.17,fz*.9);rosto.add(sm)}
+  const bc=new THREE.Mesh(new THREE.CircleGeometry(R*.13,20),new THREE.MeshBasicMaterial({color:tem("blush")?"#e0607a":"#e8a0a0",transparent:true,opacity:tem("blush")?.75:.35}));bc.position.set(s*R*.5,fy-R*.12,fz*.86);bc.rotation.y=s*.5;rosto.add(bc)}
+ const boca=new THREE.Mesh(new THREE.TorusGeometry(R*.24,R*(tem("batom")?.06:.035),8,24,Math.PI),mat(tem("batom")?"#c0183a":"#9a3d3d"));boca.rotation.z=Math.PI;boca.position.set(0,fy-R*.22,fz*.97);rosto.add(boca);
+ const nariz=new THREE.Mesh(new THREE.SphereGeometry(R*.07,10,8),mat(pele));nariz.position.set(0,fy-R*.02,fz*1.04);rosto.add(nariz);
+ for(const s of[-1,1]){const coxa=cap(rQ*.42,pernaH*.45,pele);coxa.position.set(s*rQ*.45,quadrilY-pernaH*.27,0);corpo.add(coxa);
+  const canela=cap(rQ*.28,pernaH*.42,pele);canela.position.set(s*rQ*.45,pernaH*.28,0);corpo.add(canela);
+  const braco=cap(4.2,M.braco*.82,pele);braco.position.set(s*(ombro+3),quadrilY+troncoH*.78-M.braco*.45,0);braco.rotation.z=s*.06;corpo.add(braco);
+  const pulsoY=quadrilY+troncoH*.78-M.braco*.86-4,px=s*(ombro+3)-s*M.braco*.82*.06*.5;
+  const mao=new THREE.Mesh(new THREE.BoxGeometry(5.5,7,2.6),mat(pele));mao.position.set(px,pulsoY-4,0);corpo.add(mao);
+  for(let i=0;i<4;i++){const d=cap(.6,3.4,pele);d.position.set(px-2.0+i*1.35,pulsoY-9.6,0);corpo.add(d);
+   if(tem("anel")&&i===1){const an=new THREE.Mesh(new THREE.TorusGeometry(.85,.25,8,16),mat("#d4af37"));an.rotation.x=Math.PI/2;an.position.set(px-2.0+i*1.35,pulsoY-9.4,0);acessM.push(an)}}
+  const pol=cap(.65,2.6,pele);pol.position.set(px-s*3.4,pulsoY-5,1);pol.rotation.z=-s*.6;corpo.add(pol);
+  if(tem("pulseira")){const pu=new THREE.Mesh(new THREE.TorusGeometry(3.4,.6,10,28),mat("#d4af37"));pu.rotation.x=Math.PI/2;pu.position.set(px,pulsoY+1.5,0);acessM.push(pu)}
+  if(!tem("salto")&&!tem("sandalia")){const pe=new THREE.Mesh(new THREE.BoxGeometry(7,3,20),mat(pele));pe.position.set(s*rQ*.45,1.5,4);corpo.add(pe)}}
+ // roupas
+ const roupas=new THREE.Group();roupas.visible=document.getElementById("vRoupas").checked;G.add(roupas);
+ const acess=new THREE.Group();acess.visible=document.getElementById("vAcess").checked;G.add(acess);acessM.forEach(m=>acess.add(m));
+ for(const id of usando){const p=PECAS.find(x=>x.id===id);
+  if(p.tipo==="top"){const m=tronco(rB*1.04,rC*1.05,rQ*1.03,troncoH*.95,p.cor);m.position.y=quadrilY+troncoH*.03;roupas.add(m)}
+  if(p.tipo==="bottom"){const m=tronco(rQ*1.0,rQ*1.05,rQ*1.08,troncoH*.32,p.cor);m.position.y=quadrilY-troncoH*.22;roupas.add(m)}
+  if(p.tipo==="saia"){const g=new THREE.CylinderGeometry(rC*1.05,rQ*1.45,pernaH*.62,40,1,true);g.scale(1,1,.8);const m=new THREE.Mesh(g,mat(p.cor));m.material.side=THREE.DoubleSide;m.position.y=quadrilY-pernaH*.22;roupas.add(m)}
+  if(p.tipo==="pe"){for(const s of[-1,1]){const m=new THREE.Mesh(new THREE.BoxGeometry(8,2.5,22),mat(p.cor));m.position.set(s*rQ*.45,1.3,4);acess.add(m)}}
+  if(p.tipo==="bolsa"){const m=new THREE.Mesh(new THREE.BoxGeometry(18,13,6),mat(p.cor));m.position.set(rQ*1.25,quadrilY+4,4);acess.add(m);
+   const alca=new THREE.Mesh(new THREE.TorusGeometry(rB*1.15,.6,8,40),mat(p.cor));alca.position.set(0,quadrilY+troncoH*.55,0);alca.rotation.set(Math.PI/2.3,0,.6);acess.add(alca)}
+  if(p.tipo==="salto"){for(const s of[-1,1]){const sola=new THREE.Mesh(new THREE.BoxGeometry(7.5,1.5,21),mat(p.cor));sola.position.set(s*rQ*.45,1.2,4);sola.rotation.x=-.3;acess.add(sola);
+    const tac=new THREE.Mesh(new THREE.CylinderGeometry(.6,.9,8,10),mat(p.cor));tac.position.set(s*rQ*.45,4,-5);acess.add(tac)}}
+  if(p.tipo==="brinco"){for(const s of[-1,1]){const m=new THREE.Mesh(new THREE.TorusGeometry(1.6,.4,8,20),mat(p.cor));m.position.set(s*cabeca*.37,H-cabeca*.62,0);acess.add(m)}}}
+ // cotas estilo projeto
+ const cotas=new THREE.Group();cotas.visible=document.getElementById("vCotas").checked;G.add(cotas);
+ const x=-rQ*2.2;cotas.add(cota(new THREE.Vector3(x,0,0),new THREE.Vector3(x,H,0),`Altura ${M.altura}`,new THREE.Vector3(-10,0,0)));
+ const yb=quadrilY+troncoH*.72,yc=quadrilY+troncoH*.45,yq=quadrilY+troncoH*.12;
+ [["Busto",M.busto,yb,rB],["Cintura",M.cintura,yc,rC],["Quadril",M.quadril,yq,rQ]].forEach(([n,v,y,rr])=>cotas.add(cota(new THREE.Vector3(rr+2,y,0),new THREE.Vector3(rr+30,y,0),`${n} ${v}`,new THREE.Vector3(16,0,0))));
+ cotas.add(cota(new THREE.Vector3(-ombro,quadrilY+troncoH+2,0),new THREE.Vector3(ombro,quadrilY+troncoH+2,0),`Ombros ${M.ombros}`,new THREE.Vector3(0,8,0)));
+ vitrine()}
+function vitrine(){const v=document.getElementById("vitrine");v.innerHTML="";const res=[];
+ for(const p of PECAS){if(p.so&&p.so!==SEXO)continue;const f=fit(p);const d=document.createElement("div");d.className="item"+(usando.has(p.id)?" on":"");
+  d.innerHTML=`<i style="background:${p.cor}"></i><span><b>${p.nome}</b><small>${p.tec||"acessório"}</small></span>${f?`<span class="fit ${f.cls}">${f.txt}</span>`:""}`;
+  d.onclick=()=>{if(usando.has(p.id))usando.delete(p.id);else{const tipo=p.tipo;if(["top","bottom","saia"].includes(tipo))for(const o of PECAS)if(o.tipo===tipo||((tipo==="saia"&&o.tipo==="bottom")||(tipo==="bottom"&&o.tipo==="saia")))usando.delete(o.id);if(p.id==="salto")usando.delete("sandalia");if(p.id==="sandalia")usando.delete("salto");usando.add(p.id)}montar()};
+  v.appendChild(d);if(f&&usando.has(p.id))res.push(`<b>${p.nome}:</b> ${f.det} Tecido: ${p.tec}.`)}
+ document.getElementById("resumo").innerHTML=res.join("<br>")||"Escolha uma peça para ver o caimento."}
+["vCotas","vRoupas","vAcess"].forEach(i=>document.getElementById(i).onchange=montar);
+document.getElementById("vGrade").onchange=e=>grade.visible=e.target.checked;
+function tam(){const w=cena.clientWidth,h=cena.clientHeight||innerHeight;ren.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix()}
+addEventListener("resize",tam);tam();montar();
+const PADRAO={F:{altura:165,ombros:40,busto:92,cintura:74,quadril:100,braco:58,perna:78},M:{altura:177,ombros:47,busto:100,cintura:86,quadril:98,braco:63,perna:82}};
+function sexo(x){SEXO=x;Object.assign(M,PADRAO[x]);document.getElementById("bF").classList.toggle("on",x==="F");document.getElementById("bM").classList.toggle("on",x==="M");
+ for(const k in M){const el=document.getElementById("s_"+k)||document.querySelector(`input[data-k="${k}"]`);if(el){el.value=M[k];el.dispatchEvent(new Event("input"))}}
+ for(const p of PECAS)if(p.so&&p.so!==x)usando.delete(p.id);montar()}
+document.getElementById("bF").onclick=()=>sexo("F");document.getElementById("bM").onclick=()=>sexo("M");
+ctl.autoRotate=true;ctl.autoRotateSpeed=2;document.getElementById("bGiro").classList.add("on");
+document.getElementById("bGiro").onclick=e=>{ctl.autoRotate=!ctl.autoRotate;e.target.classList.toggle("on",ctl.autoRotate)};
+(function loop(){ctl.update();ren.render(sc,cam);requestAnimationFrame(loop)})();
+</script>
+</body></html>
