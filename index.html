@@ -36,6 +36,7 @@ output{min-width:46px;text-align:right;font:600 15px "Playfair Display",serif;co
 <h2>Medidas (cm)</h2>
 <div id="medidas"></div>
 <h2>Tom de pele</h2><div class="tons" id="tons"></div>
+<h2>Cabelo</h2><div class="tons" id="cabs"></div><input type="hidden" id="corCab" value="#2b1a10">
 <div class="dica">Sem foto: as medidas e as escolhas geram o avatar. A foto vestida é opcional e só serve para a fita digital.</div>
 </aside>
 <main id="cena">
@@ -83,13 +84,14 @@ const usando=new Set(["regata","short"]);
 const md=document.getElementById("medidas");
 for(const k in M){const l=document.createElement("label");l.innerHTML=`${NOMES[k]} <input type="range" min="${LIM[k][0]}" max="${LIM[k][1]}" value="${M[k]}" data-k="${k}"><output>${M[k]}</output>`;md.appendChild(l);
  l.querySelector("input").oninput=e=>{M[k]=+e.target.value;l.querySelector("output").textContent=M[k];montar()}}
+const cb=document.getElementById("cabs");["#120c08","#2b1a10","#5a3418","#8a5a2b","#c9a063","#e6cf9a","#8c2f1c","#b8b8b8"].forEach((c,i)=>{const b=document.createElement("button");b.style.background=c;if(i===1)b.className="on";b.onclick=()=>{document.getElementById("corCab").value=c;[...cb.children].forEach(x=>x.className="");b.className="on";montar()};cb.appendChild(b)});
 const tn=document.getElementById("tons");TONS.forEach(t=>{const b=document.createElement("button");b.style.background=t;b.title="Tom "+t;if(t===pele)b.className="on";b.onclick=()=>{pele=t;[...tn.children].forEach(x=>x.className="");b.className="on";montar()};tn.appendChild(b)});
 // cena
 const cena=document.getElementById("cena");
 const ren=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});ren.toneMapping=THREE.ACESFilmicToneMapping;ren.toneMappingExposure=1.05;ren.shadowMap.enabled=true;ren.shadowMap.type=THREE.PCFSoftShadowMap;ren.setPixelRatio(Math.min(devicePixelRatio,2));cena.appendChild(ren.domElement);
 const sc=new THREE.Scene();sc.environment=new THREE.PMREMGenerator(ren).fromScene(new RoomEnvironment(),.04).texture;
 const cam=new THREE.PerspectiveCamera(35,1,1,2000);cam.position.set(150,120,260);
-const ctl=new OrbitControls(cam,ren.domElement);ctl.target.set(0,85,0);ctl.enableDamping=true;
+const ctl=new OrbitControls(cam,ren.domElement);ctl.target.set(0,85,0);ctl.enableDamping=true;window.__cam=(y,d)=>{ctl.autoRotate=false;ctl.target.set(0,y,0);cam.position.set(0,y+d*.08,d);ctl.update()};
 sc.add(new THREE.HemisphereLight("#fff4e0","#2a2016",.35));const dl=new THREE.DirectionalLight("#fff1dc",2.2);dl.position.set(90,260,160);dl.castShadow=true;dl.shadow.mapSize.set(2048,2048);Object.assign(dl.shadow.camera,{left:-120,right:120,top:220,bottom:-20});dl.shadow.radius=6;sc.add(dl);
 const rim=new THREE.DirectionalLight("#e4c56a",1.6);rim.position.set(-160,180,-160);sc.add(rim);const rim2=new THREE.DirectionalLight("#aac4ff",.6);rim2.position.set(160,120,-120);sc.add(rim2);
 const pod=new THREE.Mesh(new THREE.CylinderGeometry(70,74,4,96),new THREE.MeshPhysicalMaterial({color:"#141210",roughness:.18,metalness:.2,clearcoat:1,clearcoatRoughness:.08}));pod.position.y=-2;pod.receiveShadow=true;sc.add(pod);
@@ -97,6 +99,42 @@ const aro=new THREE.Mesh(new THREE.TorusGeometry(72,.5,12,160),new THREE.MeshSta
 const chao=new THREE.Mesh(new THREE.CircleGeometry(600,64),new THREE.ShadowMaterial({opacity:.35}));chao.rotation.x=-Math.PI/2;chao.position.y=-4;chao.receiveShadow=true;sc.add(chao);
 const grade=new THREE.GridHelper(150,30,"#6b5520","#2a241c");grade.position.y=.2;grade.visible=false;sc.add(grade);
 let G=new THREE.Group();sc.add(G);
+const BASE={};
+async function carregar(sx){const d=await (await fetch(`corpo_${sx.toLowerCase()}.json`)).json();
+ const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0)).buffer;const pos=new Float32Array(b64(d.pos)),idx=new Uint32Array(b64(d.idx)),lm=d.lm,n=pos.length/3;
+ let H=0;for(let i=0;i<n;i++)H=Math.max(H,pos[3*i+1]);
+ const sh=lm["l-shoulder"],pel=lm["pelvis"];const B={pos,idx,lm,H};
+ B.zc=pel[2];B.ombros=Math.round(sh[0]*2*1.1);
+ // limite do tronco (separa braços) por altura
+ B.lim=y=>{const t=y/H;return t>.82?99:t>.56?sh[0]*1.05:H*.16};
+ // crotch
+ let cr=1e9;for(let i=0;i<n;i++){if(Math.abs(pos[3*i])<1.2&&pos[3*i+1]>H*.3&&pos[3*i+1]<H*.6)cr=Math.min(cr,pos[3*i+1])}B.cr=cr;
+ const circ=(y)=>{let a=0,z0=1e9,z1=-1e9;for(let i=0;i<n;i++){const x=pos[3*i],yy=pos[3*i+1],z=pos[3*i+2];if(Math.abs(yy-y)<.8&&Math.abs(x)<=B.lim(yy)){a=Math.max(a,Math.abs(x));z0=Math.min(z0,z);z1=Math.max(z1,z)}}
+  const bb=(z1-z0)/2,h=((a-bb)/(a+bb))**2;return{a,b:bb,c:Math.PI*(a+bb)*(1+3*h/(10+Math.sqrt(4-3*h)))}};
+ // busca bandas: cintura = menor perímetro entre pelve e ombro; quadril = maior perímetro abaixo; busto = maior acima
+ let best={w:[1e9],q:[0],b:[0]};for(let y=pel[1]-12;y<sh[1]-4;y+=.5){const c=circ(y);
+  if(y>pel[1]+(sh[1]-pel[1])*.3&&y<pel[1]+(sh[1]-pel[1])*.6&&c.c<best.w[0])best.w=[c.c,y,c];
+  if(y<pel[1]+4&&c.c>best.q[0])best.q=[c.c,y,c];
+  if(y>pel[1]+(sh[1]-pel[1])*.55&&c.c>best.b[0])best.b=[c.c,y,c]}
+ B.cW=best.w[0];B.cQ=best.q[0];B.cB=best.b[0];B.tW=best.w[1]/H;B.tQ=best.q[1]/H;B.tB=best.b[1]/H;B.tS=sh[1]/H;B.tK=lm["l-knee"][1]/H;
+ B.aW=best.w[2].a;B.aQ=best.q[2].a;B.aB=best.b[2].a;B.bB=best.b[2].b;
+ // regiões do rosto/cabelo
+ const reg=new Uint8Array(n),mo=lm["mouth"],eL=lm["l-eye"],hd=lm["head"];B.boca=[];let cw=0;
+ for(let i=0;i<n;i++){const y=pos[3*i+1];if(Math.abs(y-eL[1])<1.5&&Math.abs(pos[3*i])<12&&pos[3*i+2]<eL[2])cw=Math.max(cw,Math.abs(pos[3*i]))}
+ // perfil do rosto: ponta do nariz e lábios pela linha do meio
+ let nz=-1e9,ny=0;for(let i=0;i<n;i++){const y=pos[3*i+1];if(Math.abs(pos[3*i])<.4&&y>eL[1]-8&&y<eL[1]&&pos[3*i+2]>nz){nz=pos[3*i+2];ny=y}}
+ const ly=ny-(eL[1]-ny)*1.25;B.ly=ly;
+ for(let i=0;i<n;i++){const x=pos[3*i],y=pos[3*i+1],z=pos[3*i+2],ax=Math.abs(x),e=eL[1];
+  if(ax<2.4&&Math.abs(y-ly)<1.0-ax*.15&&z>nz-2.6){reg[i]=1;B.boca.push(i)}
+  else if(z>eL[2]-1&&ax>eL[0]-2.2&&ax<eL[0]+2.6&&y>e+1.75-Math.abs(ax-eL[0]-.2)*.12&&y<e+2.15-Math.abs(ax-eL[0]-.2)*.12)reg[i]=2;
+  else if(z>eL[2]-1.2&&ax>eL[0]-1.6&&ax<eL[0]+2&&y>e+.55&&y<e+1.45)reg[i]=3;
+  else if(z>eL[2]-3.5&&ax>eL[0]+.4&&ax<eL[0]+3.6&&y>e-4.2&&y<e-1.6)reg[i]=4;
+  else if((y>e+6.2-Math.max(0,ax-3.5)*.5)||(y>e+3&&z<eL[2]-2.5&&ax>4)||(y>e-6&&z<eL[2]-9&&ax<cw+1)||(y>e+.3&&z<eL[2]-6&&ax<cw+1.2))reg[i]=9}
+ B.reg=reg;B.cabW=cw;return B}
+BASE.F=await carregar("F");BASE.M=await carregar("M");
+const PADRAO={};for(const s of["F","M"]){const B=BASE[s];PADRAO[s]={altura:Math.round(B.H),ombros:B.ombros,busto:Math.round(B.cB),cintura:Math.round(B.cW),quadril:Math.round(B.cQ),braco:s==="F"?58:63,perna:Math.round(B.cr)}}
+Object.assign(M,PADRAO.F);for(const k in M){const el=document.querySelector(`input[data-k="${k}"]`);if(el){el.value=M[k];el.nextElementSibling.textContent=M[k]}}
+
 const OURO=["#d4af37","#c9a227"],PRETO=["#1c1c1c"];
 const mat=c=>{let m;if(OURO.includes(c))m=new THREE.MeshPhysicalMaterial({color:"#e0b84a",metalness:1,roughness:.18,clearcoat:.6});
  else if(c==="#fff")m=new THREE.MeshPhysicalMaterial({color:"#fbf8f2",roughness:.1,clearcoat:1});
@@ -121,51 +159,70 @@ function fit(p){if(!p.tab)return null;let melhor=null;
  return folga<=2?{cls:"at",txt:`⚠️ ${melhor.t} justo`,det:`Tamanho ${melhor.t}: fica justo (folga de ${folga} cm).`}:{cls:"ok",txt:`✅ ${melhor.t} ideal`,det:`Tamanho ${melhor.t}: caimento ideal (folga de ${folga} cm).`}}
 function montar(){
  for(const p of PECAS)if(p.so&&p.so!==SEXO)usando.delete(p.id);if(SEXO==="M"&&![...usando].some(i=>PECAS.find(p=>p.id===i).tipo==="top"))usando.add("camisa");if(SEXO==="M"&&![...usando].some(i=>["bottom","saia"].includes(PECAS.find(p=>p.id===i).tipo)))usando.add("bermuda");if(SEXO==="F"&&usando.size===0){usando.add("regata");usando.add("short")}sc.remove(G);G=new THREE.Group();sc.add(G);
- const H=M.altura,cabeca=H*.13,pescoco=H*.04,troncoH=H*.30,pernaH=M.perna*1.0,quadrilY=pernaH+4;
- const rB=r(M.busto),rC=r(M.cintura),rQ=r(M.quadril),ombro=M.ombros/2;
- const corpo=new THREE.Group();G.add(corpo);const acessM=[];
- const t=SEXO==="M"?tronco(rB*.98,rC*1.0,rQ*.92,troncoH,pele):tronco(rB,rC,rQ,troncoH,pele);t.position.y=quadrilY;corpo.add(t);
- const pes=cap(4.5,pescoco,pele);pes.position.y=quadrilY+troncoH+pescoco/2;corpo.add(pes);
- const cab=new THREE.Mesh(new THREE.SphereGeometry(cabeca*.42,32,24),mat(pele));cab.scale.set(.85,1.1,.95);cab.position.y=H-cabeca*.5;corpo.add(cab);
- const R=cabeca*.42,fy=H-cabeca*.5,fz=R*.95*.93,tem=id=>usando.has(id);
- const rosto=new THREE.Group();corpo.add(rosto);
- for(const s of[-1,1]){const olho=new THREE.Mesh(new THREE.SphereGeometry(R*.16,16,12),mat("#fff"));olho.scale.z=.5;olho.position.set(s*R*.33,fy+R*.15,fz*.93);rosto.add(olho);
-  const iris=new THREE.Mesh(new THREE.SphereGeometry(R*.09,12,10),mat("#3b2416"));iris.position.set(s*R*.33,fy+R*.15,fz*.93+R*.07);rosto.add(iris);
-  const sob=new THREE.Mesh(new THREE.TorusGeometry(R*.17,R*.025,6,16,Math.PI*.8),mat("#3b2416"));sob.position.set(s*R*.33,fy+R*.22,fz*.9);sob.rotation.z=Math.PI*.1;rosto.add(sob);
-  if(tem("sombra")){const sm=new THREE.Mesh(new THREE.SphereGeometry(R*.19,16,10,0,Math.PI*2,0,Math.PI*.5),mat("#8e5aa8"));sm.scale.z=.45;sm.position.set(s*R*.33,fy+R*.17,fz*.9);rosto.add(sm)}
-  const bc=new THREE.Mesh(new THREE.CircleGeometry(R*.13,20),new THREE.MeshBasicMaterial({color:tem("blush")?"#e0607a":"#e8a0a0",transparent:true,opacity:tem("blush")?.75:.35}));bc.position.set(s*R*.5,fy-R*.12,fz*.86);bc.rotation.y=s*.5;rosto.add(bc)}
- const boca=new THREE.Mesh(new THREE.TorusGeometry(R*.24,R*(tem("batom")?.06:.035),8,24,Math.PI),mat(tem("batom")?"#c0183a":"#9a3d3d"));boca.rotation.z=Math.PI;boca.position.set(0,fy-R*.22,fz*.97);rosto.add(boca);
- const nariz=new THREE.Mesh(new THREE.SphereGeometry(R*.07,10,8),mat(pele));nariz.position.set(0,fy-R*.02,fz*1.04);rosto.add(nariz);
- for(const s of[-1,1]){const coxa=cap(rQ*.42,pernaH*.45,pele);coxa.position.set(s*rQ*.45,quadrilY-pernaH*.27,0);corpo.add(coxa);
-  const canela=cap(rQ*.28,pernaH*.42,pele);canela.position.set(s*rQ*.45,pernaH*.28,0);corpo.add(canela);
-  const braco=cap(4.2,M.braco*.82,pele);braco.position.set(s*(ombro+3),quadrilY+troncoH*.78-M.braco*.45,0);braco.rotation.z=s*.06;corpo.add(braco);
-  const pulsoY=quadrilY+troncoH*.78-M.braco*.86-4,px=s*(ombro+3)-s*M.braco*.82*.06*.5;
-  const mao=new THREE.Mesh(new THREE.BoxGeometry(5.5,7,2.6),mat(pele));mao.position.set(px,pulsoY-4,0);corpo.add(mao);
-  for(let i=0;i<4;i++){const d=cap(.6,3.4,pele);d.position.set(px-2.0+i*1.35,pulsoY-9.6,0);corpo.add(d);
-   if(tem("anel")&&i===1){const an=new THREE.Mesh(new THREE.TorusGeometry(.85,.25,8,16),mat("#d4af37"));an.rotation.x=Math.PI/2;an.position.set(px-2.0+i*1.35,pulsoY-9.4,0);acessM.push(an)}}
-  const pol=cap(.65,2.6,pele);pol.position.set(px-s*3.4,pulsoY-5,1);pol.rotation.z=-s*.6;corpo.add(pol);
-  if(tem("pulseira")){const pu=new THREE.Mesh(new THREE.TorusGeometry(3.4,.6,10,28),mat("#d4af37"));pu.rotation.x=Math.PI/2;pu.position.set(px,pulsoY+1.5,0);acessM.push(pu)}
-  if(!tem("salto")&&!tem("sandalia")){const pe=new THREE.Mesh(new THREE.BoxGeometry(7,3,20),mat(pele));pe.position.set(s*rQ*.45,1.5,4);corpo.add(pe)}}
+ const B=BASE[SEXO],P0=B.pos,n=P0.length/3,bH=B.H,tem=id=>usando.has(id),L=B.lm;
+ // ---- deformação pelas medidas ----
+ const kB=M.busto/B.cB,kW=M.cintura/B.cW,kQ=M.quadril/B.cQ,kS=M.ombros/B.ombros,kp=M.perna/B.cr,kup=(M.altura-B.cr*kp)/(bH-B.cr);
+ const fy=y=>y<B.cr?y*kp:B.cr*kp+(y-B.cr)*kup;
+ const lerp=(a,b,t)=>a+(b-a)*Math.min(1,Math.max(0,t));
+ function kx(y){const t=y/bH;const pts=[[B.tK,1],[B.tQ,kQ],[B.tW,kW],[B.tB,kB],[B.tS,kS],[B.tS+.05,1]];
+  if(t<=pts[0][0]||t>=pts[5][0])return 1;for(let i=0;i<5;i++)if(t<pts[i+1][0]){const u=(t-pts[i][0])/(pts[i+1][0]-pts[i][0]);const s=u*u*(3-2*u);return pts[i][1]+(pts[i+1][1]-pts[i][1])*s}return 1}
+ const P=new Float32Array(P0.length);
+ for(let i=0;i<n;i++){const x=P0[3*i],y=P0[3*i+1],z=P0[3*i+2],k=kx(y),lim=B.lim(y);let nx;
+  if(Math.abs(x)<=lim)nx=x*k;else nx=x+Math.sign(x)*lim*(k-1);
+  P[3*i]=nx;P[3*i+1]=fy(y);P[3*i+2]=B.zc+(z-B.zc)*k}
+ // sorriso: cantos da boca sobem
+ for(const i of B.boca){const dx=Math.abs(P0[3*i]);if(dx>1.6)P[3*i+1]+=Math.min(.25,(dx-1.6)*.3)}
+ const LM=k=>{const v=L[k];const kk=kx(v[1]);return new THREE.Vector3(Math.abs(v[0])<=B.lim(v[1])?v[0]*kk:v[0]+Math.sign(v[0])*B.lim(v[1])*(kk-1),fy(v[1]),B.zc+(v[2]-B.zc)*kk)};
+ const geo=new THREE.BufferGeometry();geo.setAttribute("position",new THREE.BufferAttribute(P,3));geo.setIndex(new THREE.BufferAttribute(B.idx,1));geo.computeVertexNormals();
+ // pele + maquiagem por cor de vértice
+ const C=new Float32Array(P.length),cp=new THREE.Color(pele),tmp=new THREE.Color();
+ for(let i=0;i<n;i++){let c=cp;const r=B.reg[i];
+  if(r===1)c=tmp.set(tem("batom")?"#b3122f":"#c27a72").lerp(cp,tem("batom")?0:.35);
+  else if(r===2)c=tmp.set(document.getElementById("corCab")?.value||"#3a2618").lerp(cp,.35);
+  else if(r===3&&tem("sombra"))c=tmp.set("#8e5aa8").lerp(cp,.35);
+  else if(r===4)c=tmp.set(tem("blush")?"#e0607a":"#d98f86").lerp(cp,tem("blush")?.62:.85);
+  C[3*i]=c.r;C[3*i+1]=c.g;C[3*i+2]=c.b}
+ geo.setAttribute("color",new THREE.BufferAttribute(C,3));
+ const corpoM=new THREE.Mesh(geo,new THREE.MeshPhysicalMaterial({vertexColors:true,roughness:.55,sheen:.5,sheenColor:"#ffd8c4",sheenRoughness:.6,clearcoat:.05}));
+ const corpo=new THREE.Group();G.add(corpo);corpo.add(corpoM);const acessM=[];
+ const Np=geo.attributes.normal.array;
+ // casca que segue o corpo (roupa, cabelo, sapato)
+ function casca(pred,off,cor,matx){const ix=[];const I=B.idx;for(let t=0;t<I.length;t+=3){if(pred(I[t])&&pred(I[t+1])&&pred(I[t+2]))ix.push(I[t],I[t+1],I[t+2])}
+  const Q=new Float32Array(P.length);const o=typeof off==="function"?off:()=>off;for(let i=0;i<n;i++){const d=o(i);Q[3*i]=P[3*i]+Np[3*i]*d;Q[3*i+1]=P[3*i+1]+Np[3*i+1]*d;Q[3*i+2]=P[3*i+2]+Np[3*i+2]*d}
+  const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.BufferAttribute(Q,3));g.setIndex(ix);g.computeVertexNormals();const m=new THREE.Mesh(g,matx||mat(cor));m.material.side=THREE.DoubleSide;return m}
+ const T=i=>P0[3*i+1]/bH,X=i=>Math.abs(P0[3*i]),tronco_=i=>X(i)<=B.lim(P0[3*i+1]);
+ // olhos
+ for(const s of["l","r"]){const e=LM(s+"-eye");const o=new THREE.Mesh(new THREE.SphereGeometry(1.15,24,16),new THREE.MeshPhysicalMaterial({color:"#f8f5ef",roughness:.08,clearcoat:1}));o.position.copy(e);corpo.add(o);
+  const ir=new THREE.Mesh(new THREE.CircleGeometry(.52,24),new THREE.MeshPhysicalMaterial({color:SEXO==="F"?"#5a3a22":"#3e2a1a",roughness:.2,clearcoat:1}));ir.position.copy(e).add(new THREE.Vector3(0,0,1.13));corpo.add(ir);
+  const pu=new THREE.Mesh(new THREE.CircleGeometry(.22,16),new THREE.MeshBasicMaterial({color:"#050505"}));pu.position.copy(e).add(new THREE.Vector3(0,0,1.14));corpo.add(pu)}
+ // cabelo
+ const corCab=document.getElementById("corCab")?.value||"#2b1a10";
+ const cab=casca(i=>B.reg[i]===9,.35,null,new THREE.MeshPhysicalMaterial({color:corCab,roughness:.55,sheen:.35,sheenColor:new THREE.Color(corCab).lerp(new THREE.Color("#fff"),.35),sheenRoughness:.4,envMapIntensity:.4}));corpo.add(cab);
+ if(SEXO==="F"){const hd=LM("head"),w=B.cabW*kx(L["head"][1]);const g=new THREE.CylinderGeometry(w*1.02,w*1.25,fy(L["neck"][1])-fy(L["neck"][1]-14)+11,48,6,true,Math.PI*.5,Math.PI);
+  const m=new THREE.Mesh(g,cab.material);m.position.set(0,fy(L["l-eye"][1])-11,hd.z-1.2);m.scale.z=.85;corpo.add(m)}
  // roupas
  const roupas=new THREE.Group();roupas.visible=document.getElementById("vRoupas").checked;G.add(roupas);
- const acess=new THREE.Group();acess.visible=document.getElementById("vAcess").checked;G.add(acess);acessM.forEach(m=>acess.add(m));
+ const acess=new THREE.Group();acess.visible=document.getElementById("vAcess").checked;G.add(acess);
+ const wr={};for(const s of["l","r"]){const h=LM(s+"-hand"),e=LM(s+"-elbow");wr[s]={p:h,d:h.clone().sub(e).normalize()}}
  for(const id of usando){const p=PECAS.find(x=>x.id===id);const nR=roupas.children.length,nA=acess.children.length;
-  if(p.tipo==="top"){const m=tronco(rB*1.04,rC*1.05,rQ*1.03,troncoH*.95,p.cor);m.position.y=quadrilY+troncoH*.03;roupas.add(m)}
-  if(p.tipo==="bottom"){const m=tronco(rQ*1.0,rQ*1.05,rQ*1.08,troncoH*.32,p.cor);m.position.y=quadrilY-troncoH*.22;roupas.add(m)}
-  if(p.tipo==="saia"){const g=new THREE.CylinderGeometry(rC*1.05,rQ*1.45,pernaH*.62,40,1,true);g.scale(1,1,.8);const m=new THREE.Mesh(g,mat(p.cor));m.material.side=THREE.DoubleSide;m.position.y=quadrilY-pernaH*.22;roupas.add(m)}
-  if(p.tipo==="pe"){for(const s of[-1,1]){const m=new THREE.Mesh(new THREE.BoxGeometry(8,2.5,22),mat(p.cor));m.position.set(s*rQ*.45,1.3,4);acess.add(m)}}
-  if(p.tipo==="bolsa"){const m=new THREE.Mesh(new THREE.BoxGeometry(18,13,6),mat(p.cor));m.position.set(rQ*1.25,quadrilY+4,4);acess.add(m);
-   const alca=new THREE.Mesh(new THREE.TorusGeometry(rB*1.15,.6,8,40),mat(p.cor));alca.position.set(0,quadrilY+troncoH*.55,0);alca.rotation.set(Math.PI/2.3,0,.6);acess.add(alca)}
-  if(p.tipo==="salto"){for(const s of[-1,1]){const sola=new THREE.Mesh(new THREE.BoxGeometry(7.5,1.5,21),mat(p.cor));sola.position.set(s*rQ*.45,1.2,4);sola.rotation.x=-.3;acess.add(sola);
-    const tac=new THREE.Mesh(new THREE.CylinderGeometry(.6,.9,8,10),mat(p.cor));tac.position.set(s*rQ*.45,4,-5);acess.add(tac)}}
-  if(p.tipo==="brinco"){for(const s of[-1,1]){const m=new THREE.Mesh(new THREE.TorusGeometry(1.6,.4,8,20),mat(p.cor));m.position.set(s*cabeca*.37,H-cabeca*.62,0);acess.add(m)}}
+  if(p.tipo==="top"){const ate=id==="camisa"?B.tS+.02:B.tS-.01,manga=id==="camisa";roupas.add(casca(i=>T(i)>B.tQ-.02&&T(i)<ate&&(tronco_(i)||(manga&&T(i)>B.tB-.04&&X(i)<B.lim(P0[3*i+1])+9)),.45,p.cor))}
+  if(p.tipo==="bottom"){const ini=id==="bermuda"?B.tK+.06:B.cr/bH-.04;roupas.add(casca(i=>T(i)>ini&&T(i)<B.tW-.01&&X(i)<B.lim(P0[3*i+1])+2,.5,p.cor))}
+  if(p.tipo==="saia"){const yw=fy(B.tW*bH)-2,yb=fy(B.tK*bH)-4,rw=B.aW*kW*1.06,rb=B.aQ*kQ*1.55;const g=new THREE.CylinderGeometry(rw,rb,yw-yb,64,8,true);g.scale(1,1,.78);const m=new THREE.Mesh(g,mat(p.cor));m.material.side=THREE.DoubleSide;m.position.set(0,(yw+yb)/2,B.zc);roupas.add(m)}
+  if(p.tipo==="pe"||p.tipo==="salto"){acess.add(casca(i=>T(i)<.04,p.tipo==="salto"?.35:.2,p.cor));
+   if(p.tipo==="salto")for(const s of["l","r"]){const a=LM(s+"-ankle");const tac=new THREE.Mesh(new THREE.CylinderGeometry(.5,.8,a.y-1,12),mat(p.cor));tac.position.set(a.x,(a.y-1)/2,a.z-4);acess.add(tac)}}
+  if(p.tipo==="bolsa"){const sh=LM("r-shoulder"),hp=LM("pelvis");const lado=-1;const fim=new THREE.Vector3(lado*(B.aQ*kQ+3),hp.y+2,B.zc+2);
+   const cur=new THREE.CatmullRomCurve3([new THREE.Vector3(sh.x*.8,sh.y+4,sh.z),new THREE.Vector3(0,(sh.y+hp.y)/2+8,B.zc+B.bB*kB+2.5),fim]);
+   acess.add(new THREE.Mesh(new THREE.TubeGeometry(cur,48,.45,8,false),mat(p.cor)));const m=new THREE.Mesh(new THREE.BoxGeometry(5,15,20),new THREE.MeshPhysicalMaterial({color:p.cor,roughness:.35,clearcoat:.6}));m.position.copy(fim).add(new THREE.Vector3(lado*2,-6,0));acess.add(m)}
+  if(p.tipo==="brinco"){for(const s of[-1,1]){const e=LM("l-eye");const m=new THREE.Mesh(new THREE.TorusGeometry(1.3,.22,10,28),mat(p.cor));m.position.set(s*B.cabW*1.0,e.y-4.6,B.zc+L["head"][2]-1.5-B.zc);m.rotation.y=Math.PI/2;acess.add(m)}}
+  if(p.id==="pulseira"){for(const s of["l","r"]){const m=new THREE.Mesh(new THREE.TorusGeometry(2.6,.45,12,32),mat(p.cor));m.position.copy(wr[s].p).addScaledVector(wr[s].d,-2.2);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),wr[s].d);acess.add(m)}}
+  if(p.id==="anel"){for(const s of["l","r"]){const h3=LM(s+"-hand-3");const m=new THREE.Mesh(new THREE.TorusGeometry(.75,.22,10,24),mat(p.cor));m.position.copy(h3);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),wr[s].d);acess.add(m)}}
   if(id===ULT){[...roupas.children.slice(nR),...acess.children.slice(nA)].forEach(o=>{o.userData.y0=o.position.y;ANIM.push(o)});T0=performance.now()}}
+ const H=M.altura,rB=B.aB*kB,rC=B.aW*kW,rQ=B.aQ*kQ,ombro=M.ombros/2,yb=fy(B.tB*bH),yc=fy(B.tW*bH),yq=fy(B.tQ*bH),ysh=fy(B.tS*bH);
  // cotas estilo projeto
  const cotas=new THREE.Group();cotas.visible=document.getElementById("vCotas").checked;G.add(cotas);
- const x=-rQ*2.2;cotas.add(cota(new THREE.Vector3(x,0,0),new THREE.Vector3(x,H,0),`Altura ${M.altura}`,new THREE.Vector3(-10,0,0)));
- const yb=quadrilY+troncoH*.72,yc=quadrilY+troncoH*.45,yq=quadrilY+troncoH*.12;
- [["Busto",M.busto,yb,rB],["Cintura",M.cintura,yc,rC],["Quadril",M.quadril,yq,rQ]].forEach(([n,v,y,rr])=>cotas.add(cota(new THREE.Vector3(rr+2,y,0),new THREE.Vector3(rr+30,y,0),`${n} ${v}`,new THREE.Vector3(16,0,0))));
- cotas.add(cota(new THREE.Vector3(-ombro,quadrilY+troncoH+2,0),new THREE.Vector3(ombro,quadrilY+troncoH+2,0),`Ombros ${M.ombros}`,new THREE.Vector3(0,8,0)));
+ const x=-rQ*2.6;cotas.add(cota(new THREE.Vector3(x,0,0),new THREE.Vector3(x,H,0),`Altura ${M.altura}`,new THREE.Vector3(-10,0,0)));
+  [["Busto",M.busto,yb,rB],["Cintura",M.cintura,yc,rC],["Quadril",M.quadril,yq,rQ]].forEach(([n,v,y,rr])=>cotas.add(cota(new THREE.Vector3(rr+8,y,0),new THREE.Vector3(rr+34,y,0),`${n} ${v}`,new THREE.Vector3(16,0,0))));
+ cotas.add(cota(new THREE.Vector3(-ombro,ysh+4,0),new THREE.Vector3(ombro,ysh+4,0),`Ombros ${M.ombros}`,new THREE.Vector3(ombro+30,0,0)));
  G.traverse(o=>{if(o.isMesh){o.castShadow=true}});vitrine()}
 function vitrine(){const v=document.getElementById("vitrine");v.innerHTML="";const res=[];
  for(const p of PECAS){if(p.so&&p.so!==SEXO)continue;const f=fit(p);const d=document.createElement("div");d.className="item"+(usando.has(p.id)?" on":"");
@@ -177,7 +234,6 @@ function vitrine(){const v=document.getElementById("vitrine");v.innerHTML="";con
 document.getElementById("vGrade").onchange=e=>grade.visible=e.target.checked;
 function tam(){const w=cena.clientWidth,h=cena.clientHeight||innerHeight;ren.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix()}
 addEventListener("resize",tam);tam();montar();
-const PADRAO={F:{altura:165,ombros:40,busto:92,cintura:74,quadril:100,braco:58,perna:78},M:{altura:177,ombros:47,busto:100,cintura:86,quadril:98,braco:63,perna:82}};
 function sexo(x){SEXO=x;Object.assign(M,PADRAO[x]);document.getElementById("bF").classList.toggle("on",x==="F");document.getElementById("bM").classList.toggle("on",x==="M");
  for(const k in M){const el=document.getElementById("s_"+k)||document.querySelector(`input[data-k="${k}"]`);if(el){el.value=M[k];el.dispatchEvent(new Event("input"))}}
  for(const p of PECAS)if(p.so&&p.so!==x)usando.delete(p.id);montar()}
