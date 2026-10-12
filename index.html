@@ -38,6 +38,7 @@ output{min-width:46px;text-align:right;font-weight:700;color:var(--pet)}
 <label><input type="checkbox" id="vRoupas" checked> Roupas</label>
 <label><input type="checkbox" id="vAcess" checked> Acessórios</label>
 <label><input type="checkbox" id="vGrade" checked> Grade da planta</label></div>
+<div id="aviso" style="position:absolute;top:56px;left:50%;transform:translateX(-50%);background:#ff8000;color:#fff;padding:8px 16px;border-radius:20px;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none"></div>
 <div class="selo">Arraste para girar · role para aproximar</div>
 <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px"><button id="bF" class="sx on">♀ Feminino</button><button id="bM" class="sx">♂ Masculino</button><button id="bGiro" class="sx">⟳ Girar 360°</button></div>
 <style>.sx{border:1px solid #0b4a5a;background:#fff;color:#0b4a5a;border-radius:16px;padding:6px 12px;font-weight:600;cursor:pointer}.sx.on{background:#0b4a5a;color:#fff}</style>
@@ -50,7 +51,7 @@ output{min-width:46px;text-align:right;font-weight:700;color:var(--pet)}
 <script type="module">
 import * as THREE from './three.module.js';
 import {OrbitControls} from './OrbitControls.js';
-let SEXO="F";const M={altura:165,ombros:40,busto:92,cintura:74,quadril:100,braco:58,perna:78};
+let SEXO="F",ULT=null,T0=0,ANIM=[];const M={altura:165,ombros:40,busto:92,cintura:74,quadril:100,braco:58,perna:78};
 const LIM={altura:[140,200],ombros:[32,52],busto:[70,140],cintura:[55,130],quadril:[75,150],braco:[45,70],perna:[60,95]};
 const NOMES={altura:"Altura",ombros:"Ombros",busto:"Busto",cintura:"Cintura",quadril:"Quadril",braco:"Braço",perna:"Perna (entrepernas)"};
 const TONS=["#f6d7c3","#eac0a1","#d8a47f","#b97f57","#8d5a3b","#5e3a26"];let pele=TONS[2];
@@ -131,7 +132,7 @@ function montar(){
  // roupas
  const roupas=new THREE.Group();roupas.visible=document.getElementById("vRoupas").checked;G.add(roupas);
  const acess=new THREE.Group();acess.visible=document.getElementById("vAcess").checked;G.add(acess);acessM.forEach(m=>acess.add(m));
- for(const id of usando){const p=PECAS.find(x=>x.id===id);
+ for(const id of usando){const p=PECAS.find(x=>x.id===id);const nR=roupas.children.length,nA=acess.children.length;
   if(p.tipo==="top"){const m=tronco(rB*1.04,rC*1.05,rQ*1.03,troncoH*.95,p.cor);m.position.y=quadrilY+troncoH*.03;roupas.add(m)}
   if(p.tipo==="bottom"){const m=tronco(rQ*1.0,rQ*1.05,rQ*1.08,troncoH*.32,p.cor);m.position.y=quadrilY-troncoH*.22;roupas.add(m)}
   if(p.tipo==="saia"){const g=new THREE.CylinderGeometry(rC*1.05,rQ*1.45,pernaH*.62,40,1,true);g.scale(1,1,.8);const m=new THREE.Mesh(g,mat(p.cor));m.material.side=THREE.DoubleSide;m.position.y=quadrilY-pernaH*.22;roupas.add(m)}
@@ -140,7 +141,8 @@ function montar(){
    const alca=new THREE.Mesh(new THREE.TorusGeometry(rB*1.15,.6,8,40),mat(p.cor));alca.position.set(0,quadrilY+troncoH*.55,0);alca.rotation.set(Math.PI/2.3,0,.6);acess.add(alca)}
   if(p.tipo==="salto"){for(const s of[-1,1]){const sola=new THREE.Mesh(new THREE.BoxGeometry(7.5,1.5,21),mat(p.cor));sola.position.set(s*rQ*.45,1.2,4);sola.rotation.x=-.3;acess.add(sola);
     const tac=new THREE.Mesh(new THREE.CylinderGeometry(.6,.9,8,10),mat(p.cor));tac.position.set(s*rQ*.45,4,-5);acess.add(tac)}}
-  if(p.tipo==="brinco"){for(const s of[-1,1]){const m=new THREE.Mesh(new THREE.TorusGeometry(1.6,.4,8,20),mat(p.cor));m.position.set(s*cabeca*.37,H-cabeca*.62,0);acess.add(m)}}}
+  if(p.tipo==="brinco"){for(const s of[-1,1]){const m=new THREE.Mesh(new THREE.TorusGeometry(1.6,.4,8,20),mat(p.cor));m.position.set(s*cabeca*.37,H-cabeca*.62,0);acess.add(m)}}
+  if(id===ULT){[...roupas.children.slice(nR),...acess.children.slice(nA)].forEach(o=>{o.userData.y0=o.position.y;ANIM.push(o)});T0=performance.now()}}
  // cotas estilo projeto
  const cotas=new THREE.Group();cotas.visible=document.getElementById("vCotas").checked;G.add(cotas);
  const x=-rQ*2.2;cotas.add(cota(new THREE.Vector3(x,0,0),new THREE.Vector3(x,H,0),`Altura ${M.altura}`,new THREE.Vector3(-10,0,0)));
@@ -151,7 +153,7 @@ function montar(){
 function vitrine(){const v=document.getElementById("vitrine");v.innerHTML="";const res=[];
  for(const p of PECAS){if(p.so&&p.so!==SEXO)continue;const f=fit(p);const d=document.createElement("div");d.className="item"+(usando.has(p.id)?" on":"");
   d.innerHTML=`<i style="background:${p.cor}"></i><span><b>${p.nome}</b><small>${p.tec||"acessório"}</small></span>${f?`<span class="fit ${f.cls}">${f.txt}</span>`:""}`;
-  d.onclick=()=>{if(usando.has(p.id))usando.delete(p.id);else{const tipo=p.tipo;if(["top","bottom","saia"].includes(tipo))for(const o of PECAS)if(o.tipo===tipo||((tipo==="saia"&&o.tipo==="bottom")||(tipo==="bottom"&&o.tipo==="saia")))usando.delete(o.id);if(p.id==="salto")usando.delete("sandalia");if(p.id==="sandalia")usando.delete("salto");usando.add(p.id)}montar()};
+  d.onclick=()=>{if(usando.has(p.id))usando.delete(p.id);else{const tipo=p.tipo;if(["top","bottom","saia"].includes(tipo))for(const o of PECAS)if(o.tipo===tipo||((tipo==="saia"&&o.tipo==="bottom")||(tipo==="bottom"&&o.tipo==="saia")))usando.delete(o.id);if(p.id==="salto")usando.delete("sandalia");if(p.id==="sandalia")usando.delete("salto");usando.add(p.id);ULT=p.id;aviso("Vestindo: "+p.nome)}montar();ULT=null};
   v.appendChild(d);if(f&&usando.has(p.id))res.push(`<b>${p.nome}:</b> ${f.det} Tecido: ${p.tec}.`)}
  document.getElementById("resumo").innerHTML=res.join("<br>")||"Escolha uma peça para ver o caimento."}
 ["vCotas","vRoupas","vAcess"].forEach(i=>document.getElementById(i).onchange=montar);
@@ -165,6 +167,7 @@ function sexo(x){SEXO=x;Object.assign(M,PADRAO[x]);document.getElementById("bF")
 document.getElementById("bF").onclick=()=>sexo("F");document.getElementById("bM").onclick=()=>sexo("M");
 ctl.autoRotate=true;ctl.autoRotateSpeed=2;document.getElementById("bGiro").classList.add("on");
 document.getElementById("bGiro").onclick=e=>{ctl.autoRotate=!ctl.autoRotate;e.target.classList.toggle("on",ctl.autoRotate)};
-(function loop(){ctl.update();ren.render(sc,cam);requestAnimationFrame(loop)})();
+function aviso(t){const a=document.getElementById("aviso");a.textContent="👗 "+t;a.style.opacity=1;clearTimeout(aviso.t);aviso.t=setTimeout(()=>a.style.opacity=0,1600)}
+(function loop(){const k=Math.min(1,(performance.now()-T0)/700);for(const o of ANIM){o.position.y=o.userData.y0+(1-k)*(1-k)*40;o.scale.setScalar(1+(1-k)*.25)}if(k>=1)ANIM=[];ctl.update();ren.render(sc,cam);requestAnimationFrame(loop)})();
 </script>
 </body></html>
