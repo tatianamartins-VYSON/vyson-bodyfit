@@ -117,7 +117,7 @@ async function carregar(sx){const d=await (await fetch(`corpo_${sx.toLowerCase()
   if(y<pel[1]+4&&c.c>best.q[0])best.q=[c.c,y,c];
   if(y>pel[1]+(sh[1]-pel[1])*.55&&c.c>best.b[0])best.b=[c.c,y,c]}
  B.cW=best.w[0];B.cQ=best.q[0];B.cB=best.b[0];B.tW=best.w[1]/H;B.tQ=best.q[1]/H;B.tB=best.b[1]/H;B.tS=sh[1]/H;B.tK=lm["l-knee"][1]/H;
- B.aW=best.w[2].a;B.aQ=best.q[2].a;B.aB=best.b[2].a;B.bB=best.b[2].b;
+ B.aW=best.w[2].a;B.bW=best.w[2].b;B.aQ=best.q[2].a;B.aB=best.b[2].a;B.bB=best.b[2].b;
  // regiões do rosto/cabelo
  const reg=new Uint8Array(n),mo=lm["mouth"],eL=lm["l-eye"],hd=lm["head"];B.boca=[];let cw=0;
  for(let i=0;i<n;i++){const y=pos[3*i+1];if(Math.abs(y-eL[1])<1.5&&Math.abs(pos[3*i])<12&&pos[3*i+2]<eL[2])cw=Math.max(cw,Math.abs(pos[3*i]))}
@@ -187,8 +187,8 @@ function montar(){
  const corpo=new THREE.Group();G.add(corpo);corpo.add(corpoM);const acessM=[];
  const Np=geo.attributes.normal.array;
  // casca que segue o corpo (roupa, cabelo, sapato)
- function casca(pred,off,cor,matx){const ix=[];const I=B.idx;for(let t=0;t<I.length;t+=3){if(pred(I[t])&&pred(I[t+1])&&pred(I[t+2]))ix.push(I[t],I[t+1],I[t+2])}
-  const Q=new Float32Array(P.length);const o=typeof off==="function"?off:()=>off;for(let i=0;i<n;i++){const d=o(i);Q[3*i]=P[3*i]+Np[3*i]*d;Q[3*i+1]=P[3*i+1]+Np[3*i+1]*d;Q[3*i+2]=P[3*i+2]+Np[3*i+2]*d}
+ function casca(pred,off,cor,matx,hem){const ix=[];const I=B.idx;for(let t=0;t<I.length;t+=3){const k=pred(I[t])+pred(I[t+1])+pred(I[t+2]);if(k===3||(hem&&k>=1&&[I[t],I[t+1],I[t+2]].every(v=>{const q=P0[3*v+1]/bH;return q>hem[0]-.02&&q<hem[1]+.02})))ix.push(I[t],I[t+1],I[t+2])}
+  const Q=new Float32Array(P.length);const o=typeof off==="function"?off:()=>off;for(let i=0;i<n;i++){const d=o(i);Q[3*i]=P[3*i]+Np[3*i]*d;Q[3*i+1]=P[3*i+1]+Np[3*i+1]*d;Q[3*i+2]=P[3*i+2]+Np[3*i+2]*d;if(hem){const t=P0[3*i+1]/bH;if(t<hem[0])Q[3*i+1]=fy(hem[0]*bH);else if(t>hem[1])Q[3*i+1]=fy(hem[1]*bH)}}
   const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.BufferAttribute(Q,3));g.setIndex(ix);g.computeVertexNormals();const m=new THREE.Mesh(g,matx||mat(cor));m.material.side=THREE.DoubleSide;return m}
  const T=i=>P0[3*i+1]/bH,X=i=>Math.abs(P0[3*i]),tronco_=i=>X(i)<=B.lim(P0[3*i+1]);
  // olhos
@@ -198,21 +198,23 @@ function montar(){
  // cabelo
  const corCab=document.getElementById("corCab")?.value||"#2b1a10";
  const cab=casca(i=>B.reg[i]===9,.35,null,new THREE.MeshPhysicalMaterial({color:corCab,roughness:.55,sheen:.35,sheenColor:new THREE.Color(corCab).lerp(new THREE.Color("#fff"),.35),sheenRoughness:.4,envMapIntensity:.4}));corpo.add(cab);
- if(SEXO==="F"){const hd=LM("head"),w=B.cabW*kx(L["head"][1]);const g=new THREE.CylinderGeometry(w*1.02,w*1.25,fy(L["neck"][1])-fy(L["neck"][1]-14)+11,48,6,true,Math.PI*.5,Math.PI);
-  const m=new THREE.Mesh(g,cab.material);m.position.set(0,fy(L["l-eye"][1])-11,hd.z-1.2);m.scale.z=.85;corpo.add(m)}
+ if(SEXO==="F"){const hd=LM("head"),e=LM("l-eye"),w=B.cabW*1.08,Lc=e.y-fy(B.tS*bH)+10,pts=[];
+  for(let j=0;j<=20;j++){const u=j/20;pts.push(new THREE.Vector2(w*(1+.22*Math.sin(u*Math.PI*.8))-(u>.9?(u-.9)*12:0),-u*Lc))}
+  const g=new THREE.LatheGeometry(pts,64,Math.PI*.42,Math.PI*1.16);const m=new THREE.Mesh(g,cab.material);m.position.set(0,e.y+3,hd.z-.5);m.scale.z=.9;corpo.add(m)}
  // roupas
  const roupas=new THREE.Group();roupas.visible=document.getElementById("vRoupas").checked;G.add(roupas);
  const acess=new THREE.Group();acess.visible=document.getElementById("vAcess").checked;G.add(acess);
  const wr={};for(const s of["l","r"]){const h=LM(s+"-hand"),e=LM(s+"-elbow");wr[s]={p:h,d:h.clone().sub(e).normalize()}}
  for(const id of usando){const p=PECAS.find(x=>x.id===id);const nR=roupas.children.length,nA=acess.children.length;
-  if(p.tipo==="top"){const ate=id==="camisa"?B.tS+.02:B.tS-.01,manga=id==="camisa";roupas.add(casca(i=>T(i)>B.tQ-.02&&T(i)<ate&&(tronco_(i)||(manga&&T(i)>B.tB-.04&&X(i)<B.lim(P0[3*i+1])+9)),.45,p.cor))}
-  if(p.tipo==="bottom"){const ini=id==="bermuda"?B.tK+.06:B.cr/bH-.04;roupas.add(casca(i=>T(i)>ini&&T(i)<B.tW-.01&&X(i)<B.lim(P0[3*i+1])+2,.5,p.cor))}
+  if(p.tipo==="top"){const ate=id==="camisa"?B.tS+.02:B.tS-.01,manga=id==="camisa";roupas.add(casca(i=>T(i)>B.tQ+.02&&T(i)<ate&&(tronco_(i)||(manga&&T(i)>B.tB-.04&&X(i)<B.lim(P0[3*i+1])+9)),.45,p.cor,null,[B.tQ+.02,ate]))}
+  if(p.tipo==="bottom"){const ini=id==="bermuda"?B.tK+.06:B.cr/bH-.04;roupas.add(casca(i=>T(i)>ini&&T(i)<B.tW-.01&&X(i)<B.lim(P0[3*i+1])+2,.5,p.cor,null,[ini,B.tW-.01]))}
   if(p.tipo==="saia"){const yw=fy(B.tW*bH)-2,yb=fy(B.tK*bH)-4,rw=B.aW*kW*1.06,rb=B.aQ*kQ*1.55;const g=new THREE.CylinderGeometry(rw,rb,yw-yb,64,8,true);g.scale(1,1,.78);const m=new THREE.Mesh(g,mat(p.cor));m.material.side=THREE.DoubleSide;m.position.set(0,(yw+yb)/2,B.zc);roupas.add(m)}
   if(p.tipo==="pe"||p.tipo==="salto"){acess.add(casca(i=>T(i)<.04,p.tipo==="salto"?.35:.2,p.cor));
    if(p.tipo==="salto")for(const s of["l","r"]){const a=LM(s+"-ankle");const tac=new THREE.Mesh(new THREE.CylinderGeometry(.5,.8,a.y-1,12),mat(p.cor));tac.position.set(a.x,(a.y-1)/2,a.z-4);acess.add(tac)}}
-  if(p.tipo==="bolsa"){const sh=LM("r-shoulder"),hp=LM("pelvis");const lado=-1;const fim=new THREE.Vector3(lado*(B.aQ*kQ+3),hp.y+2,B.zc+2);
-   const cur=new THREE.CatmullRomCurve3([new THREE.Vector3(sh.x*.8,sh.y+4,sh.z),new THREE.Vector3(0,(sh.y+hp.y)/2+8,B.zc+B.bB*kB+2.5),fim]);
-   acess.add(new THREE.Mesh(new THREE.TubeGeometry(cur,48,.45,8,false),mat(p.cor)));const m=new THREE.Mesh(new THREE.BoxGeometry(5,15,20),new THREE.MeshPhysicalMaterial({color:p.cor,roughness:.35,clearcoat:.6}));m.position.copy(fim).add(new THREE.Vector3(lado*2,-6,0));acess.add(m)}
+  if(p.tipo==="bolsa"){const sh=LM("r-shoulder"),lado=1,yw=fy(B.tW*bH),yq=fy(B.tQ*bH),zf=B.zc;
+   const fim=new THREE.Vector3(lado*(B.aQ*kQ+2.5),yq+3,zf+1);
+   const cur=new THREE.CatmullRomCurve3([new THREE.Vector3(-sh.x*.75,sh.y+3.2,zf+1),new THREE.Vector3(-sh.x*.35,fy(B.tB*bH)+9,zf+B.bB*kB+2.2),new THREE.Vector3(0,fy(B.tB*bH)-2,zf+B.bB*kB+2.6),new THREE.Vector3(lado*B.aW*kW*.75,yw,zf+B.bW*kW+2),fim]);
+   acess.add(new THREE.Mesh(new THREE.TubeGeometry(cur,80,.4,8,false),mat(p.cor)));const m=new THREE.Mesh(new THREE.BoxGeometry(5,14,19),new THREE.MeshPhysicalMaterial({color:p.cor,roughness:.35,clearcoat:.6}));m.position.copy(fim).add(new THREE.Vector3(lado*2.6,-7,0));acess.add(m)}
   if(p.tipo==="brinco"){for(const s of[-1,1]){const e=LM("l-eye");const m=new THREE.Mesh(new THREE.TorusGeometry(1.3,.22,10,28),mat(p.cor));m.position.set(s*B.cabW*1.0,e.y-4.6,B.zc+L["head"][2]-1.5-B.zc);m.rotation.y=Math.PI/2;acess.add(m)}}
   if(p.id==="pulseira"){for(const s of["l","r"]){const m=new THREE.Mesh(new THREE.TorusGeometry(2.6,.45,12,32),mat(p.cor));m.position.copy(wr[s].p).addScaledVector(wr[s].d,-2.2);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),wr[s].d);acess.add(m)}}
   if(p.id==="anel"){for(const s of["l","r"]){const h3=LM(s+"-hand-3");const m=new THREE.Mesh(new THREE.TorusGeometry(.75,.22,10,24),mat(p.cor));m.position.copy(h3);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),wr[s].d);acess.add(m)}}
