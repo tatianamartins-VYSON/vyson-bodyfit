@@ -3,30 +3,36 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Vyson BodyFit · Manequim 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
 <style>
-:root{--pet:#0b4a5a;--lar:#ff8000;--bg:#f4f6f8;--ink:#0f1d24;--mut:#4f6068;--line:#dfe5ea}
-*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);display:grid;grid-template-columns:300px 1fr 300px;height:100vh}
-aside{background:#fff;border-right:1px solid var(--line);padding:14px;overflow:auto}aside.dir{border-right:0;border-left:1px solid var(--line)}
-h1{font-size:18px;margin:0 0 2px;color:var(--pet)}h2{font-size:13px;margin:16px 0 8px;color:#9a4a00;text-transform:uppercase;letter-spacing:.06em}
+:root{--pet:#c9a227;--lar:#c9a227;--bg:#0d0c0b;--ink:#f3ede2;--mut:#a59d8f;--line:#2a2622;--card:#16130f}
+*{box-sizing:border-box}body{margin:0;font:14px/1.5 "Inter",system-ui,sans-serif;background:var(--bg);color:var(--ink);display:grid;grid-template-columns:300px 1fr 320px;height:100vh;letter-spacing:.01em}
+aside{background:linear-gradient(180deg,#14110e,#0d0c0b);border-right:1px solid var(--line);padding:22px 18px;overflow:auto}aside.dir{border-right:0;border-left:1px solid var(--line)}
+h1{font:600 26px/1.1 "Playfair Display",Georgia,serif;margin:0 0 4px;color:#f3ede2}h1 em{color:var(--pet);font-style:italic}
+h2{font:600 11px "Inter",sans-serif;margin:22px 0 10px;color:var(--pet);text-transform:uppercase;letter-spacing:.22em}
 .sub{color:var(--mut);font-size:12px;margin:0 0 8px}
-label{display:flex;justify-content:space-between;align-items:center;margin:6px 0;font-size:13px}label input[type=range]{width:120px}
-output{min-width:46px;text-align:right;font-weight:700;color:var(--pet)}
-.tons{display:flex;gap:6px;flex-wrap:wrap}.tons button{width:28px;height:28px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #c9d3d9;cursor:pointer}.tons button.on{box-shadow:0 0 0 3px var(--lar)}
-#cena{position:relative}#cena canvas{display:block}
-.camadas{position:absolute;top:12px;left:12px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px}
-.camadas label{margin:2px 0;justify-content:flex-start;gap:6px}
-.selo{position:absolute;bottom:12px;left:12px;background:var(--pet);color:#fff;border-radius:8px;padding:6px 10px;font-size:12px}
-.item{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px;margin:6px 0;cursor:pointer;background:#fff}
-.item:hover{border-color:var(--pet)}.item.on{border-color:var(--lar);background:#fff7ef}
-.item i{width:34px;height:34px;border-radius:8px;flex-shrink:0}.item b{display:block;font-size:13px}.item small{color:var(--mut)}
-.fit{font-size:12px;font-weight:700;margin-left:auto;white-space:nowrap}.ok{color:#0d7a52}.at{color:#a15c00}.no{color:#b3261e}
-.dica{background:#f4f6f8;border-radius:8px;padding:8px;font-size:12px;color:var(--mut);margin-top:8px}
+label{display:flex;justify-content:space-between;align-items:center;margin:8px 0;font-size:13px;color:#d8d0c2}
+input[type=range]{width:120px;accent-color:var(--pet)}
+output{min-width:46px;text-align:right;font:600 15px "Playfair Display",serif;color:var(--pet)}
+.tons{display:flex;gap:8px;flex-wrap:wrap}.tons button{width:30px;height:30px;border-radius:50%;border:2px solid #0d0c0b;box-shadow:0 0 0 1px #3a342c;cursor:pointer}.tons button.on{box-shadow:0 0 0 2px var(--pet)}
+#cena{position:relative;background:radial-gradient(ellipse at 50% 35%,#3a332a 0%,#16130f 55%,#0b0a09 100%)}#cena canvas{display:block}
+.camadas{position:absolute;top:16px;left:16px;background:rgba(20,17,14,.75);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:14px;padding:10px 14px;font-size:12px}
+.camadas label{margin:3px 0;justify-content:flex-start;gap:8px}.camadas input{accent-color:var(--pet)}
+.selo{position:absolute;bottom:16px;left:16px;color:var(--mut);font-size:11px;letter-spacing:.15em;text-transform:uppercase}
+.item{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:10px;margin:8px 0;cursor:pointer;background:var(--card);transition:.25s}
+.item:hover{border-color:#5a4c2c;transform:translateX(-2px)}.item.on{border-color:var(--pet);background:linear-gradient(90deg,#241d10,#16130f);box-shadow:0 0 18px rgba(201,162,39,.15)}
+.item i{width:40px;height:40px;border-radius:50%;flex-shrink:0;box-shadow:inset 0 -6px 12px rgba(0,0,0,.35),0 0 0 1px #3a342c}.item b{display:block;font:500 14px "Playfair Display",serif}.item small{color:var(--mut);font-size:11px}
+.fit{font-size:11px;font-weight:600;margin-left:auto;white-space:nowrap}.ok{color:#7fd1a4}.at{color:#e8c25a}.no{color:#ef8a7f}
+.dica{background:#16130f;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:12px;color:var(--mut);margin-top:10px}
+.sx{border:1px solid #5a4c2c!important;background:rgba(20,17,14,.7)!important;color:#e9dcc0!important;border-radius:30px!important;padding:8px 16px!important;font:500 12px Inter,sans-serif!important;letter-spacing:.08em;backdrop-filter:blur(8px)}
+.sx.on{background:linear-gradient(135deg,#e4c56a,#a67c1a)!important;color:#141008!important;border-color:transparent!important}
+#aviso{background:linear-gradient(135deg,#e4c56a,#a67c1a)!important;color:#141008!important;font:500 13px "Playfair Display",serif!important}
 @media(max-width:900px){body{grid-template-columns:1fr;height:auto}#cena{height:70vh}}
 </style>
 </head>
 <body>
 <aside>
-<h1>Vyson BodyFit</h1><p class="sub">Manequim 3D paramétrico · as medidas geram o avatar</p>
+<h1>Vyson <em>BodyFit</em></h1><p class="sub">Manequim 3D paramétrico · as medidas geram o avatar</p>
 <h2>Medidas (cm)</h2>
 <div id="medidas"></div>
 <h2>Tom de pele</h2><div class="tons" id="tons"></div>
@@ -37,11 +43,11 @@ output{min-width:46px;text-align:right;font-weight:700;color:var(--pet)}
 <label><input type="checkbox" id="vCotas" checked> Cotas (medidas)</label>
 <label><input type="checkbox" id="vRoupas" checked> Roupas</label>
 <label><input type="checkbox" id="vAcess" checked> Acessórios</label>
-<label><input type="checkbox" id="vGrade" checked> Grade da planta</label></div>
+<label><input type="checkbox" id="vGrade"> Grade da planta</label></div>
 <div id="aviso" style="position:absolute;top:56px;left:50%;transform:translateX(-50%);background:#ff8000;color:#fff;padding:8px 16px;border-radius:20px;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none"></div>
 <div class="selo">Arraste para girar · role para aproximar</div>
 <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px"><button id="bF" class="sx on">♀ Feminino</button><button id="bM" class="sx">♂ Masculino</button><button id="bGiro" class="sx">⟳ Girar 360°</button></div>
-<style>.sx{border:1px solid #0b4a5a;background:#fff;color:#0b4a5a;border-radius:16px;padding:6px 12px;font-weight:600;cursor:pointer}.sx.on{background:#0b4a5a;color:#fff}</style>
+<style>.sx{cursor:pointer}</style>
 </main>
 <aside class="dir">
 <h2>Vitrine digital</h2><p class="sub">Clique para vestir. Vários itens ao mesmo tempo.</p>
@@ -51,6 +57,7 @@ output{min-width:46px;text-align:right;font-weight:700;color:var(--pet)}
 <script type="module">
 import * as THREE from './three.module.js';
 import {OrbitControls} from './OrbitControls.js';
+import {RoomEnvironment} from './RoomEnvironment.js';
 let SEXO="F",ULT=null,T0=0,ANIM=[];const M={altura:165,ombros:40,busto:92,cintura:74,quadril:100,braco:58,perna:78};
 const LIM={altura:[140,200],ombros:[32,52],busto:[70,140],cintura:[55,130],quadril:[75,150],braco:[45,70],perna:[60,95]};
 const NOMES={altura:"Altura",ombros:"Ombros",busto:"Busto",cintura:"Cintura",quadril:"Quadril",braco:"Braço",perna:"Perna (entrepernas)"};
@@ -79,23 +86,33 @@ for(const k in M){const l=document.createElement("label");l.innerHTML=`${NOMES[k
 const tn=document.getElementById("tons");TONS.forEach(t=>{const b=document.createElement("button");b.style.background=t;b.title="Tom "+t;if(t===pele)b.className="on";b.onclick=()=>{pele=t;[...tn.children].forEach(x=>x.className="");b.className="on";montar()};tn.appendChild(b)});
 // cena
 const cena=document.getElementById("cena");
-const ren=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});ren.setPixelRatio(Math.min(devicePixelRatio,2));cena.appendChild(ren.domElement);
-const sc=new THREE.Scene();sc.background=new THREE.Color("#eef3f6");
+const ren=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});ren.toneMapping=THREE.ACESFilmicToneMapping;ren.toneMappingExposure=1.05;ren.shadowMap.enabled=true;ren.shadowMap.type=THREE.PCFSoftShadowMap;ren.setPixelRatio(Math.min(devicePixelRatio,2));cena.appendChild(ren.domElement);
+const sc=new THREE.Scene();sc.environment=new THREE.PMREMGenerator(ren).fromScene(new RoomEnvironment(),.04).texture;
 const cam=new THREE.PerspectiveCamera(35,1,1,2000);cam.position.set(150,120,260);
 const ctl=new OrbitControls(cam,ren.domElement);ctl.target.set(0,85,0);ctl.enableDamping=true;
-sc.add(new THREE.HemisphereLight("#ffffff","#b8c4cc",1.1));const dl=new THREE.DirectionalLight("#fff",1.2);dl.position.set(80,200,120);sc.add(dl);
-const grade=new THREE.GridHelper(300,30,"#0b4a5a","#c9d6dd");sc.add(grade);
+sc.add(new THREE.HemisphereLight("#fff4e0","#2a2016",.35));const dl=new THREE.DirectionalLight("#fff1dc",2.2);dl.position.set(90,260,160);dl.castShadow=true;dl.shadow.mapSize.set(2048,2048);Object.assign(dl.shadow.camera,{left:-120,right:120,top:220,bottom:-20});dl.shadow.radius=6;sc.add(dl);
+const rim=new THREE.DirectionalLight("#e4c56a",1.6);rim.position.set(-160,180,-160);sc.add(rim);const rim2=new THREE.DirectionalLight("#aac4ff",.6);rim2.position.set(160,120,-120);sc.add(rim2);
+const pod=new THREE.Mesh(new THREE.CylinderGeometry(70,74,4,96),new THREE.MeshPhysicalMaterial({color:"#141210",roughness:.18,metalness:.2,clearcoat:1,clearcoatRoughness:.08}));pod.position.y=-2;pod.receiveShadow=true;sc.add(pod);
+const aro=new THREE.Mesh(new THREE.TorusGeometry(72,.5,12,160),new THREE.MeshStandardMaterial({color:"#c9a227",metalness:1,roughness:.25,emissive:"#5a4410",emissiveIntensity:.4}));aro.rotation.x=Math.PI/2;aro.position.y=0.1;sc.add(aro);
+const chao=new THREE.Mesh(new THREE.CircleGeometry(600,64),new THREE.ShadowMaterial({opacity:.35}));chao.rotation.x=-Math.PI/2;chao.position.y=-4;chao.receiveShadow=true;sc.add(chao);
+const grade=new THREE.GridHelper(150,30,"#6b5520","#2a241c");grade.position.y=.2;grade.visible=false;sc.add(grade);
 let G=new THREE.Group();sc.add(G);
-const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.65});
+const OURO=["#d4af37","#c9a227"],PRETO=["#1c1c1c"];
+const mat=c=>{let m;if(OURO.includes(c))m=new THREE.MeshPhysicalMaterial({color:"#e0b84a",metalness:1,roughness:.18,clearcoat:.6});
+ else if(c==="#fff")m=new THREE.MeshPhysicalMaterial({color:"#fbf8f2",roughness:.1,clearcoat:1});
+ else if(PRETO.includes(c))m=new THREE.MeshPhysicalMaterial({color:c,roughness:.15,clearcoat:1,clearcoatRoughness:.05});
+ else if(c===pele)m=new THREE.MeshPhysicalMaterial({color:c,roughness:.5,sheen:.6,sheenColor:"#ffd2b8",sheenRoughness:.5,clearcoat:.08});
+ else m=new THREE.MeshPhysicalMaterial({color:c,roughness:.7,sheen:1,sheenColor:"#ffffff",sheenRoughness:.35});
+ m.side=THREE.FrontSide;return m};
 const r=c=>c/(2*Math.PI); // raio a partir da circunferência
-function cap(rad,len,c){const m=new THREE.Mesh(new THREE.CapsuleGeometry(rad,len,8,24),mat(c));return m}
+function cap(rad,len,c){const m=new THREE.Mesh(new THREE.CapsuleGeometry(rad,len,16,40),mat(c));return m}
 function tronco(rB,rC,rQ,h,c,esc=1){ // perfil torcido pelo busto/cintura/quadril
  const pts=[[rQ*0.85,0],[rQ,h*0.12],[rQ*.98,h*.22],[rC,h*.45],[rB,h*.72],[rB*.95,h*.86],[rB*.6,h]].map(p=>new THREE.Vector2(p[0]*esc,p[1]));
- const g=new THREE.LatheGeometry(pts,40);g.scale(1,1,0.72);return new THREE.Mesh(g,mat(c))}
-function cota(a,b,txt,off){const g=new THREE.Group();const lm=new THREE.LineBasicMaterial({color:"#ff8000"});
+ const g=new THREE.LatheGeometry(pts,96);g.scale(1,1,0.72);return new THREE.Mesh(g,mat(c))}
+function cota(a,b,txt,off){const g=new THREE.Group();const lm=new THREE.LineBasicMaterial({color:"#c9a227",transparent:true,opacity:.7});
  g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([a,b]),lm));
- const cv=document.createElement("canvas");cv.width=256;cv.height=64;const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,256,64);x.strokeStyle="#ff8000";x.lineWidth=4;x.strokeRect(2,2,252,60);x.fillStyle="#0b4a5a";x.font="bold 30px system-ui";x.textAlign="center";x.fillText(txt,128,43);
- const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false}));sp.scale.set(26,6.5,1);sp.position.copy(a.clone().add(b).multiplyScalar(.5)).add(off||new THREE.Vector3());g.add(sp);return g}
+ const cv=document.createElement("canvas");cv.width=256;cv.height=64;const x=cv.getContext("2d");x.fillStyle="rgba(15,12,9,.85)";x.beginPath();x.roundRect(2,2,252,60,30);x.fill();x.strokeStyle="#c9a227";x.lineWidth=2;x.stroke();x.fillStyle="#f0dca0";x.font="500 28px Georgia,serif";x.textAlign="center";x.fillText(txt,128,43);
+ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false,transparent:true}));sp.scale.set(26,6.5,1);sp.position.copy(a.clone().add(b).multiplyScalar(.5)).add(off||new THREE.Vector3());g.add(sp);return g}
 function fit(p){if(!p.tab)return null;let melhor=null;
  for(const[t,[a,c]] of Object.entries(p.tab)){const ref=p.tipo==="top"?[M.busto,M.cintura]:[M.quadril,M.cintura];const d=Math.max(ref[0]-a,ref[1]-c);
   if(d<=0&&(!melhor||a<melhor.a))melhor={t,a,d}}
@@ -149,7 +166,7 @@ function montar(){
  const yb=quadrilY+troncoH*.72,yc=quadrilY+troncoH*.45,yq=quadrilY+troncoH*.12;
  [["Busto",M.busto,yb,rB],["Cintura",M.cintura,yc,rC],["Quadril",M.quadril,yq,rQ]].forEach(([n,v,y,rr])=>cotas.add(cota(new THREE.Vector3(rr+2,y,0),new THREE.Vector3(rr+30,y,0),`${n} ${v}`,new THREE.Vector3(16,0,0))));
  cotas.add(cota(new THREE.Vector3(-ombro,quadrilY+troncoH+2,0),new THREE.Vector3(ombro,quadrilY+troncoH+2,0),`Ombros ${M.ombros}`,new THREE.Vector3(0,8,0)));
- vitrine()}
+ G.traverse(o=>{if(o.isMesh){o.castShadow=true}});vitrine()}
 function vitrine(){const v=document.getElementById("vitrine");v.innerHTML="";const res=[];
  for(const p of PECAS){if(p.so&&p.so!==SEXO)continue;const f=fit(p);const d=document.createElement("div");d.className="item"+(usando.has(p.id)?" on":"");
   d.innerHTML=`<i style="background:${p.cor}"></i><span><b>${p.nome}</b><small>${p.tec||"acessório"}</small></span>${f?`<span class="fit ${f.cls}">${f.txt}</span>`:""}`;
