@@ -27,6 +27,7 @@ output{min-width:46px;text-align:right;font:600 15px "Playfair Display",serif;co
 .sx{border:1px solid #5a4c2c!important;background:rgba(20,17,14,.7)!important;color:#e9dcc0!important;border-radius:30px!important;padding:8px 16px!important;font:500 12px Inter,sans-serif!important;letter-spacing:.08em;backdrop-filter:blur(8px)}
 .sx.on{background:linear-gradient(135deg,#e4c56a,#a67c1a)!important;color:#141008!important;border-color:transparent!important}
 #aviso{background:linear-gradient(135deg,#e4c56a,#a67c1a)!important;color:#141008!important;font:500 13px "Playfair Display",serif!important}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chips button{border:1px solid #5a4c2c;background:#16130f;color:#e9dcc0;border-radius:20px;padding:5px 11px;font:500 12px Inter,sans-serif;cursor:pointer}.chips button.on{background:linear-gradient(135deg,#e4c56a,#a67c1a);color:#141008;border-color:transparent}
 @media(max-width:900px){body{grid-template-columns:1fr;height:auto}#cena{height:70vh}}
 </style>
 </head>
@@ -36,7 +37,9 @@ output{min-width:46px;text-align:right;font:600 15px "Playfair Display",serif;co
 <h2>Medidas (cm)</h2>
 <div id="medidas"></div>
 <h2>Tom de pele</h2><div class="tons" id="tons"></div>
-<h2>Cabelo</h2><div class="tons" id="cabs"></div><input type="hidden" id="corCab" value="#2b1a10">
+<h2>Cabelo</h2><div class="chips" id="comps"></div><div class="tons" id="cabs" style="margin-top:8px"></div><input type="hidden" id="corCab" value="#2b1a10">
+<h2>Olhos</h2><div class="tons" id="olhos"></div>
+<h2>Lábios</h2><div class="tons" id="labs"></div>
 <div class="dica">Sem foto: as medidas e as escolhas geram o avatar. A foto vestida é opcional e só serve para a fita digital.</div>
 </aside>
 <main id="cena">
@@ -84,7 +87,15 @@ const usando=new Set(["regata","short"]);
 const md=document.getElementById("medidas");
 for(const k in M){const l=document.createElement("label");l.innerHTML=`${NOMES[k]} <input type="range" min="${LIM[k][0]}" max="${LIM[k][1]}" value="${M[k]}" data-k="${k}"><output>${M[k]}</output>`;md.appendChild(l);
  l.querySelector("input").oninput=e=>{M[k]=+e.target.value;l.querySelector("output").textContent=M[k];montar()}}
-const cb=document.getElementById("cabs");["#120c08","#2b1a10","#5a3418","#8a5a2b","#c9a063","#e6cf9a","#8c2f1c","#b8b8b8"].forEach((c,i)=>{const b=document.createElement("button");b.style.background=c;if(i===1)b.className="on";b.onclick=()=>{document.getElementById("corCab").value=c;[...cb.children].forEach(x=>x.className="");b.className="on";montar()};cb.appendChild(b)});
+let COMP="chanel",OLHO="#5a3a22",LAB="natural";
+const CORES_CAB=[["Preto","#120c08"],["Castanho escuro","#2b1a10"],["Castanho","#5a3418"],["Mel","#8a5a2b"],["Loiro escuro","#b08850"],["Loiro","#e2c58a"],["Ruivo","#b0491f"],["Vermelho","#8e1414"],["Grisalho","#b8b8b8"]];
+const LABIOS=[["Natural","natural"],["Nude","#b8796a"],["Rosa","#d8607e"],["Vermelho","#b3122f"],["Vinho","#6e1428"],["Coral","#e2634a"]];
+const OLHOS=[["Castanho","#5a3a22"],["Preto","#1d130c"],["Mel","#8a5a1e"],["Verde","#4e7a3a"],["Azul","#3d6f9e"],["Cinza","#7d8790"]];
+function grupo(id,lista,ativo,fn,chip){const el=document.getElementById(id);el.innerHTML="";lista.forEach(([nome,v])=>{const b=document.createElement("button");if(chip)b.textContent=nome;else{b.style.background=v==="natural"?"linear-gradient(135deg,#c27a72,#e3a99f)":v}b.title=nome;if(v===ativo)b.className="on";b.onclick=()=>{[...el.children].forEach(x=>x.className="");b.className="on";fn(v)};el.appendChild(b)})}
+grupo("comps",[["Curto","curto"],["Chanel (pontas)","chanel"],["Médio","medio"],["Longo","longo"]],COMP,v=>{COMP=v;montar()},1);
+grupo("cabs",CORES_CAB,"#2b1a10",v=>{document.getElementById("corCab").value=v;montar()});
+grupo("olhos",OLHOS,OLHO,v=>{OLHO=v;montar()});
+grupo("labs",LABIOS,LAB,v=>{LAB=v;if(v==="natural")usando.delete("batom");else usando.add("batom");montar()});
 const tn=document.getElementById("tons");TONS.forEach(t=>{const b=document.createElement("button");b.style.background=t;b.title="Tom "+t;if(t===pele)b.className="on";b.onclick=()=>{pele=t;[...tn.children].forEach(x=>x.className="");b.className="on";montar()};tn.appendChild(b)});
 // cena
 const cena=document.getElementById("cena");
@@ -125,7 +136,7 @@ async function carregar(sx){const d=await (await fetch(`corpo_${sx.toLowerCase()
  let nz=-1e9,ny=0;for(let i=0;i<n;i++){const y=pos[3*i+1];if(Math.abs(pos[3*i])<.4&&y>eL[1]-8&&y<eL[1]&&pos[3*i+2]>nz){nz=pos[3*i+2];ny=y}}
  const ly=ny-(eL[1]-ny)*1.25;B.ly=ly;
  for(let i=0;i<n;i++){const x=pos[3*i],y=pos[3*i+1],z=pos[3*i+2],ax=Math.abs(x),e=eL[1];
-  if(ax<2.4&&Math.abs(y-ly)<1.0-ax*.15&&z>nz-2.6){reg[i]=1;B.boca.push(i)}
+  if(ax<2.3&&Math.abs(y-ly)<1.2-ax*.24&&z>nz-3.0){reg[i]=1;B.boca.push(i)}
   else if(z>eL[2]-1&&ax>eL[0]-2.2&&ax<eL[0]+2.6&&y>e+1.75-Math.abs(ax-eL[0]-.2)*.12&&y<e+2.15-Math.abs(ax-eL[0]-.2)*.12)reg[i]=2;
   else if(z>eL[2]-1.2&&ax>eL[0]-1.6&&ax<eL[0]+2&&y>e+.55&&y<e+1.45)reg[i]=3;
   else if(z>eL[2]-3.5&&ax>eL[0]+.4&&ax<eL[0]+3.6&&y>e-4.2&&y<e-1.6)reg[i]=4;
@@ -177,7 +188,7 @@ function montar(){
  // pele + maquiagem por cor de vértice
  const C=new Float32Array(P.length),cp=new THREE.Color(pele),tmp=new THREE.Color();
  for(let i=0;i<n;i++){let c=cp;const r=B.reg[i];
-  if(r===1)c=tmp.set(tem("batom")?"#b3122f":"#c27a72").lerp(cp,tem("batom")?0:.35);
+  if(r===1){const lc=tem("batom")?(LAB==="natural"?"#b3122f":LAB):"#c27a72";c=tmp.set(lc).lerp(cp,tem("batom")?.05:.35)}
   else if(r===2)c=tmp.set(document.getElementById("corCab")?.value||"#3a2618").lerp(cp,.35);
   else if(r===3&&tem("sombra"))c=tmp.set("#8e5aa8").lerp(cp,.35);
   else if(r===4)c=tmp.set(tem("blush")?"#e0607a":"#d98f86").lerp(cp,tem("blush")?.62:.85);
@@ -193,14 +204,20 @@ function montar(){
  const T=i=>P0[3*i+1]/bH,X=i=>Math.abs(P0[3*i]),tronco_=i=>X(i)<=B.lim(P0[3*i+1]);
  // olhos
  for(const s of["l","r"]){const e=LM(s+"-eye");const o=new THREE.Mesh(new THREE.SphereGeometry(1.15,24,16),new THREE.MeshPhysicalMaterial({color:"#f8f5ef",roughness:.08,clearcoat:1}));o.position.copy(e);corpo.add(o);
-  const ir=new THREE.Mesh(new THREE.CircleGeometry(.52,24),new THREE.MeshPhysicalMaterial({color:SEXO==="F"?"#5a3a22":"#3e2a1a",roughness:.2,clearcoat:1}));ir.position.copy(e).add(new THREE.Vector3(0,0,1.13));corpo.add(ir);
+  const ir=new THREE.Mesh(new THREE.CircleGeometry(.52,24),new THREE.MeshPhysicalMaterial({color:OLHO,roughness:.2,clearcoat:1}));ir.position.copy(e).add(new THREE.Vector3(0,0,1.13));corpo.add(ir);
   const pu=new THREE.Mesh(new THREE.CircleGeometry(.22,16),new THREE.MeshBasicMaterial({color:"#050505"}));pu.position.copy(e).add(new THREE.Vector3(0,0,1.14));corpo.add(pu)}
  // cabelo
  const corCab=document.getElementById("corCab")?.value||"#2b1a10";
  const cab=casca(i=>B.reg[i]===9,.35,null,new THREE.MeshPhysicalMaterial({color:corCab,roughness:.55,sheen:.35,sheenColor:new THREE.Color(corCab).lerp(new THREE.Color("#fff"),.35),sheenRoughness:.4,envMapIntensity:.4}));corpo.add(cab);
- if(SEXO==="F"){const hd=LM("head"),e=LM("l-eye"),w=B.cabW*1.08,Lc=e.y-fy(B.tS*bH)+10,pts=[];
-  for(let j=0;j<=20;j++){const u=j/20;pts.push(new THREE.Vector2(w*(1+.22*Math.sin(u*Math.PI*.8))-(u>.9?(u-.9)*12:0),-u*Lc))}
-  const g=new THREE.LatheGeometry(pts,64,Math.PI*.42,Math.PI*1.16);const m=new THREE.Mesh(g,cab.material);m.position.set(0,e.y+3,hd.z-.5);m.scale.z=.9;corpo.add(m)}
+ if(COMP!=="curto"){const hd=LM("head"),e=LM("l-eye"),top=LM("head-2"),w=B.cabW*1.12,ysh=fy(B.tS*bH);
+  const fim={chanel:e.y-8.5,medio:ysh-2,longo:ysh-22}[COMP],y0=top.y+1.2,yE=e.y+1,pts=[];
+  for(let j=0;j<=14;j++){const a=j/14*Math.PI/2;pts.push(new THREE.Vector2(Math.sin(a)*w,yE+(y0-yE)*Math.cos(a)))} // cúpula
+  const N=24;for(let j=1;j<=N;j++){const u=j/N;let r=w*(1+.1*Math.sin(u*Math.PI*.6));
+   if(COMP==="chanel"&&u>.75)r+=(u-.75)*5;else if(COMP!=="chanel"&&u>.9)r-=(u-.9)*8;
+   pts.push(new THREE.Vector2(r,yE-(yE-fim)*u))}
+  if(COMP!=="chanel")for(let j=1;j<=3;j++)pts.push(new THREE.Vector2(pts[pts.length-1].x-.5,fim-.15*j));
+  const ab=COMP==="chanel"?1.42:1.3,ini=Math.PI-ab*Math.PI/2;
+  const g=new THREE.LatheGeometry(pts,80,ini,ab*Math.PI);const m=new THREE.Mesh(g,cab.material);m.position.set(0,0,hd.z-.3);m.scale.z=1.05;corpo.add(m)}
  // roupas
  const roupas=new THREE.Group();roupas.visible=document.getElementById("vRoupas").checked;G.add(roupas);
  const acess=new THREE.Group();acess.visible=document.getElementById("vAcess").checked;G.add(acess);
@@ -236,7 +253,7 @@ function vitrine(){const v=document.getElementById("vitrine");v.innerHTML="";con
 document.getElementById("vGrade").onchange=e=>grade.visible=e.target.checked;
 function tam(){const w=cena.clientWidth,h=cena.clientHeight||innerHeight;ren.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix()}
 addEventListener("resize",tam);tam();montar();
-function sexo(x){SEXO=x;Object.assign(M,PADRAO[x]);document.getElementById("bF").classList.toggle("on",x==="F");document.getElementById("bM").classList.toggle("on",x==="M");
+function sexo(x){SEXO=x;COMP=x==='M'?'curto':'chanel';grupo('comps',[['Curto','curto'],['Chanel (pontas)','chanel'],['Médio','medio'],['Longo','longo']],COMP,v=>{COMP=v;montar()},1);Object.assign(M,PADRAO[x]);document.getElementById("bF").classList.toggle("on",x==="F");document.getElementById("bM").classList.toggle("on",x==="M");
  for(const k in M){const el=document.getElementById("s_"+k)||document.querySelector(`input[data-k="${k}"]`);if(el){el.value=M[k];el.dispatchEvent(new Event("input"))}}
  for(const p of PECAS)if(p.so&&p.so!==x)usando.delete(p.id);montar()}
 document.getElementById("bF").onclick=()=>sexo("F");document.getElementById("bM").onclick=()=>sexo("M");
